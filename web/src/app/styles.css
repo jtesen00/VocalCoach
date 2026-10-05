@@ -269,7 +269,11 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .stars-row .off { color: var(--line); }
 .song-section h3 { margin: 18px 0 6px; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .phrase-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
-.phrase-list li { display: grid; grid-template-columns: 4.6rem 1fr auto auto; gap: 0.75rem; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.phrase-list li { display: grid; grid-template-columns: 4.6rem 1fr auto auto auto; gap: 0.75rem; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.phrase-lyrics { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.phrase-lyrics .melody-shape { width: 60px; height: 24px; }
+.quality-buena { border-left-color: var(--good); }
+.quality-baja { border-left-color: var(--off); }
 .phrase-num { color: var(--muted); font-size: 0.85rem; }
 .phrase-last { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .phrase-last.pass, .status-good strong, .status-good span[aria-hidden] { color: var(--good); }
@@ -296,7 +300,8 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 input.time { width: 5.5rem; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 0.3rem 0.5rem; }
 .import-song progress { width: 100%; }
 @media (max-width: 480px) {
-  .phrase-list li { grid-template-columns: 1fr auto; gap: 0.3rem 0.75rem; }
+  .phrase-list li { grid-template-columns: 1fr auto auto; gap: 0.3rem 0.75rem; }
   .phrase-num { grid-column: 1 / -1; }
-  .phrase-list li > button { grid-column: 1 / -1; justify-self: start; }
+  .phrase-lyrics { grid-column: 1 / -1; }
+  .phrase-list li > button.small { justify-self: start; min-width: 2.6rem; }
 }

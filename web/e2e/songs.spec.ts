@@ -68,3 +68,25 @@ test('importar un audio: se extrae la melodía y se puede practicar', async ({ p
   await page.getByRole('button', { name: 'Borrar melodia prueba' }).click();
   await expect(page.getByRole('button', { name: 'Abrir melodia prueba' })).toHaveCount(0);
 });
+
+test('importar una canción completa (voz + instrumentos, estéreo): frases correctas y se pueden escuchar', async ({ page }) => {
+  await openSongs(page);
+  await page.locator('input[type=file]').setInputFiles(resolve(import.meta.dirname, '.fixtures/cancion-completa.wav'));
+  await page.getByLabel(/Uso este audio solo para mi práctica personal/).check();
+  await page.getByRole('button', { name: 'Analizar melodía' }).click();
+
+  await expect(page.getByRole('heading', { name: 'cancion completa' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Calidad de la extracción: buena.')).toBeVisible();
+  // La canción tiene dos frases de 7 notas (estrofa y estribillo), con instrumentos alrededor.
+  await expect(page.locator('.phrase-list li')).toHaveCount(2);
+  await expect(page.locator('.phrase-list li').first()).toContainText('7 notas');
+  await expect(page.locator('.phrase-list li').nth(1)).toContainText('7 notas');
+
+  // Se puede escuchar cada frase y toda la melodía, y parar.
+  const listen = page.locator('.phrase-list li').first().getByRole('button', { name: '▶' });
+  await listen.click();
+  await expect(page.locator('.phrase-list li').first().getByRole('button', { name: '■' })).toBeVisible();
+  await page.getByRole('button', { name: '▶ Escuchar toda la melodía' }).click();
+  await page.getByRole('button', { name: '■ Parar' }).click();
+  await expect(page.getByRole('button', { name: '▶ Escuchar toda la melodía' })).toBeVisible();
+});

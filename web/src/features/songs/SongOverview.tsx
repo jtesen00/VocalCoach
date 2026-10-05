@@ -1,7 +1,8 @@
 import { analyzeSong, rangeWarnings } from '../../core/songs/analysis';
 import { songDifficulty } from '../../core/songs/difficulty';
 import { keyName, recommendKey } from '../../core/songs/key';
-import { allPhrases } from '../../core/songs/melody';
+import { guideEvents, type GuideEvent } from '../../core/exercises/guide';
+import { allPhrases, phrasePlan } from '../../core/songs/melody';
 import { describeIssue } from '../../core/songs/coach';
 import { weakestPhrase } from '../../core/songs/scoring';
 import type { Song } from '../../core/songs/types';
@@ -10,6 +11,8 @@ import { displayNote } from '../../shared/labels';
 import { profileStore } from '../../shared/profile-store';
 import type { Settings } from '../../shared/settings';
 import { keyHistory, setSongVersion, songStore } from '../../shared/song-store';
+import { MelodyShape } from '../exercises/MelodyShape';
+import { ListenButton } from './ListenButton';
 import { Stars } from './Stars';
 
 interface Props {
@@ -46,12 +49,37 @@ export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onB
   const weakId = weakestPhrase(Object.fromEntries(phrases.map((p) => [p.phrase.id, results[p.phrase.id] && { score: results[p.phrase.id].last }])));
   const weak = weakId ? phrases.find((p) => p.phrase.id === weakId)! : null;
   const t = rec.best.transpose;
+  const imported = song.license === 'user-provided';
+  /** Toda la melodía, con los silencios reales entre frases (máx. 1,5 s). */
+  const wholeMelody = (): GuideEvent[] => {
+    const out: GuideEvent[] = [];
+    phrases.forEach((p, i) => {
+      if (i) out.push({ type: 'rest', durationS: 0.8 });
+      out.push(...guideEvents(phrasePlan(p, transpose)));
+    });
+    return out;
+  };
+  const QUALITY = {
+    buena: 'La melodía se extrajo con claridad.',
+    media: 'Extracción aproximada: escucha las frases y practica las que suenen como la canción.',
+    baja: 'Se oyó poca voz principal: prueba con otro fragmento, con una pista solo de voz o con otra versión de la canción.',
+  } as const;
 
   return (
     <section className="song" aria-label={song.title}>
       <button className="link back" onClick={onBack}>← Todas las canciones</button>
       <h2>{song.title}</h2>
       <p className="hint">{song.credit}</p>
+      {imported && song.extraction && (
+        <p className={`notice quality-${song.extraction.quality}`}>
+          <strong>Calidad de la extracción: {song.extraction.quality}.</strong> {QUALITY[song.extraction.quality]}
+          {!song.extraction.stereo && ' El archivo es mono: con estéreo se separa mejor la voz de los instrumentos.'}
+        </p>
+      )}
+      <p className="version-buttons">
+        <ListenButton events={wholeMelody} label="▶ Escuchar toda la melodía" />
+        {imported && <span className="hint">Cada frase indica en qué minuto empieza en la canción original, para que la compares.</span>}
+      </p>
 
       <div className="version-card">
         <p className="teacher-label">Tu versión recomendada</p>
@@ -135,7 +163,11 @@ export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onB
               return (
                 <li key={p.phrase.id}>
                   <span className="phrase-num">Frase {p.index + 1}</span>
-                  <span className="phrase-lyrics">{p.phrase.lyrics}</span>
+                  <span className="phrase-lyrics">
+                    <MelodyShape plan={phrasePlan(p, transpose)} />
+                    {imported ? `${p.phrase.lyrics} · ${p.phrase.notes.length} notas` : p.phrase.lyrics}
+                  </span>
+                  <ListenButton className="small" events={() => guideEvents(phrasePlan(p, transpose))} label="▶" playingLabel="■" />
                   <span className={`phrase-last ${r ? (r.last >= 80 ? 'pass' : r.last >= 60 ? 'fair' : 'fail') : ''}`}>
                     {r ? `${r.last} % ${ICON(r.last)}` : '—'}
                   </span>

@@ -20,7 +20,7 @@ Componentes del spec y dónde viven:
 | Song Scoring Engine | `core/songs/scoring.ts` |
 | Adaptive Training Engine | `core/songs/training.ts` (+ el profesor de la Fase 4 en cada ejercicio) |
 | Feedback en tiempo real | `core/songs/live.ts` |
-| Importación desde audio | `core/songs/transcribe.ts` + `audio/melody-import.ts` (Web Worker) |
+| Importación desde audio | `core/songs/melody-extraction.ts` (melodía principal, polifónica) + `transcribe.ts` (notas, frases) + `audio/melody-import.ts` (Web Worker) |
 
 **Entidades (spec §19): solo las necesarias.**
 

@@ -15,3 +15,8 @@
 - **Una frase repite notas**: para "intentos distintos" se cuenta una vez por evaluación (`NoteStat.seen`), no por aparición.
 - **Estable pero desafinado no es éxito**: la estabilidad solo pondera lo acertado.
 - **Transcripción a 16 kHz** (ventana 1024, salto 256): una canción de 4 minutos se analiza en pocos segundos en un Web Worker. `OfflineAudioContext` decodifica, mezcla a mono, remuestrea y filtra en un paso.
+- **Monofónico ≠ polifónico:** MPM/YIN sirven para una sola voz (micrófono); en una mezcla hacen falta saliencia armónica, contornos y voicing (Melodia).
+- **Suboctava en la suma armónica:** los armónicos pares de la nota real votan por la octava inferior; se corrige exigiendo apoyo de armónicos impares.
+- **Los armónicos del bajo están centrados** como la voz (el 6.º de un Do2 es un Sol4); se distinguen porque decaen tras el ataque. El decaimiento se mide al **principio** del contorno, porque un contorno puede fundir la voz con la cola de un instrumento en la misma nota.
+- **El voicing de Melodia (μ − 0,2σ) está pensado para mezclas:** con voz sola descarta notas buenas; se usa un umbral relativo a los contornos más fuertes.
+- **`Math.max(...array)` con cientos de miles de elementos desborda la pila:** usar un bucle.

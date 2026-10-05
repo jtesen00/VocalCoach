@@ -17,7 +17,7 @@ function voice(ctx: AudioContext): OscillatorNode {
  * Programa la guía empezando en `start` (reloj del contexto). Las notas consecutivas
  * suenan legato con una envolvente por nota para evitar clics. Devuelve el instante final.
  */
-export function scheduleGuide(ctx: AudioContext, events: readonly GuideEvent[], start: number, a4Hz = 440): number {
+export function scheduleGuide(ctx: AudioContext, events: readonly GuideEvent[], start: number, a4Hz = 440, nodes?: OscillatorNode[]): number {
   let t = start;
   for (const ev of events) {
     const end = t + ev.durationS;
@@ -41,6 +41,7 @@ export function scheduleGuide(ctx: AudioContext, events: readonly GuideEvent[], 
     osc.connect(gain).connect(ctx.destination);
     osc.start(t);
     osc.stop(end + 0.01);
+    nodes?.push(osc);
     t = end;
   }
   return t;

@@ -2,21 +2,27 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { midiToFreq } from '../src/core/music/notes';
 import { tone, VOICE_LIKE_HARMONICS } from '../src/core/pitch/signals';
+import { makeMix } from '../src/core/songs/test-mix';
 
-/** WAV PCM 16 bits mono. */
-export function writeWav(path: string, samples: Float32Array, sampleRate: number): void {
-  const data = Buffer.alloc(samples.length * 2);
-  samples.forEach((s, i) => data.writeInt16LE(Math.round(Math.max(-1, Math.min(1, s)) * 32767), i * 2));
+/** WAV PCM 16 bits, mono o estéreo (canales intercalados). */
+export function writeWav(path: string, samples: Float32Array, sampleRate: number, right?: Float32Array): void {
+  const ch = right ? 2 : 1;
+  const data = Buffer.alloc(samples.length * 2 * ch);
+  const put = (v: number, o: number) => data.writeInt16LE(Math.round(Math.max(-1, Math.min(1, v)) * 32767), o);
+  samples.forEach((s, i) => {
+    put(s, i * 2 * ch);
+    if (right) put(right[i], i * 4 + 2);
+  });
   const header = Buffer.alloc(44);
   header.write('RIFF', 0);
   header.writeUInt32LE(36 + data.length, 4);
   header.write('WAVEfmt ', 8);
   header.writeUInt32LE(16, 16);
   header.writeUInt16LE(1, 20);
-  header.writeUInt16LE(1, 22);
+  header.writeUInt16LE(ch, 22);
   header.writeUInt32LE(sampleRate, 24);
-  header.writeUInt32LE(sampleRate * 2, 28);
-  header.writeUInt16LE(2, 32);
+  header.writeUInt32LE(sampleRate * 2 * ch, 28);
+  header.writeUInt16LE(2 * ch, 32);
   header.writeUInt16LE(16, 34);
   header.write('data', 36);
   header.writeUInt32LE(data.length, 40);
@@ -50,4 +56,12 @@ export function writeMelodyFile(path: string): void {
     o += c.length;
   }
   writeWav(path, out, sr);
+}
+
+/** Canción completa sintética en estéreo: voz centrada + piano, guitarra, bajo y batería. */
+export function writeSongMixFile(path: string): void {
+  const mix = makeMix({ sampleRate: 44100 });
+  let peak = 0;
+  for (let i = 0; i < mix.left.length; i++) peak = Math.max(peak, Math.abs(mix.left[i]), Math.abs(mix.right[i]));
+  writeWav(path, mix.left.map((v) => (0.8 * v) / peak), 44100, mix.right.map((v) => (0.8 * v) / peak));
 }

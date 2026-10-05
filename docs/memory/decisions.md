@@ -2,6 +2,12 @@
 
 Formato: fecha · decisión · motivo · referencia. Lo más reciente arriba.
 
+## 2026-10-05 (mañana) · Importar MP3: extracción polifónica
+- **El detector monofónico no sirve para canciones completas** (0 % medido): la importación usa extracción de la melodía principal estilo Melodia (saliencia armónica + estéreo + contornos). · Feedback del equipo tras probar un MP3 real.
+- **Antes de ajustar, medir:** mezcla sintética reproducible con verdad conocida (`core/songs/test-mix.ts`) y métricas tipo MIREX; los umbrales se eligieron con esa medición y quedan fijados en tests.
+- **Sin modelos de IA todavía**: la extracción por DSP es offline, ligera y sin descargas; la separación de voz con IA (fase 8c) queda para mezclas mono, densas o con coros.
+- **La melodía extraída se puede escuchar** frase a frase y entera: sin eso el usuario no puede saber si la extracción es correcta.
+
 ## 2026-10-05 (madrugada) · Entrenamiento por canción
 - **Se adelanta la Fase 8a** (canciones) por ser el diferenciador del producto. · Actualización incremental del spec. · [ADR-010](../adr/ADR-010-song-training.md)
 - **Una frase es un `ExercisePlan`**: se reutilizan el motor de pitch, la evaluación, la UI y el profesor; no hay un detector distinto para canciones. · Spec §18.

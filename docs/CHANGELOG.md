@@ -4,6 +4,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Corregido — Importar canciones desde MP3
+- **La extracción de la melodía no funcionaba con canciones reales** (voz + instrumentos): usaba el detector monofónico del micrófono, que acertaba el 0 % en una mezcla, así que apenas sonaba la guía y las frases no tenían sentido.
+- Nueva **extracción de la melodía principal de música polifónica** (`core/songs/melody-extraction.ts`, estilo Melodia):
+  - aislamiento del centro estéreo y saliencia por suma armónica con penalización de suboctava;
+  - contornos de altura y filtros de voz/no voz: decaimiento de instrumentos pulsados, centrado, armonicidad y vibrato;
+  - corrección de octavas y separación de sílabas repetidas.
+  - Medido en mezclas sintéticas: **92–100 %** de altura correcta en estéreo, frente al 0 % anterior (`pnpm bench:melody`).
+- Frases más comprensibles: se unen las demasiado cortas, se descartan los fragmentos, y cada una muestra su minuto, su número de notas y su forma melódica.
+- **Escuchar la melodía extraída:** ▶ en cada frase y "Escuchar toda la melodía", con botón para parar (`audioEngine.stopGuide`).
+- Indicador de **calidad de la extracción** (buena, media o baja) con consejos, y aviso si el archivo es mono.
+- La importación conserva el estéreo y analiza a 22,05 kHz.
+- 10 tests de extracción con umbrales, benchmark comparativo y E2E con una canción completa estéreo.
+
 ### Añadido — Entrenamiento por canción (Fase 8a, adelantada)
 - **Pestaña Canciones** con 4 canciones seguras: Estrellita y Martinillo (tradicionales), Oda a la alegría (melodía de dominio público con letra original) y Luz de puerto (original). La melodía está escrita como datos: notas, pulsos y sílabas.
 - **Perfil vocal dinámico** (`core/profile/vocal-profile.ts`):

@@ -57,7 +57,7 @@ export function ImportSong({ onOpen }: { onOpen: (id: string) => void }) {
       </p>
       <ul className="hint">
         <li>🔒 El audio se analiza en tu dispositivo: no se sube, no se guarda y la app no lo reproduce. Solo guardamos la melodía extraída, aquí.</li>
-        <li>🎤 Funciona mejor con voz sola o pistas de voz. Con la canción completa (voz + instrumentos) la melodía es aproximada.</li>
+        <li>🎤 Funciona con la canción completa (voz + instrumentos). Mejor en estéreo y con la voz clara; con una pista solo de voz, mejor aún.</li>
       </ul>
 
       <label className="field file-field">

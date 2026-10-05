@@ -41,7 +41,9 @@ El usuario carga un MP3, M4A o WAV y, opcionalmente, el fragmento ("desde / hast
 
 - El audio no se sube, no se guarda y la app no lo reproduce; solo queda la melodía, en local, y se puede borrar.
 - Antes de analizar, el usuario confirma el uso personal y educativo.
-- Calidad: muy buena con voz sola o pistas de voz; aproximada con la mezcla completa. La mejora es la separación de voz (fase 8c).
+- **Extracción polifónica** (estilo Melodia, ver [investigación](../research/fuentes-de-melodia.md)): 92–100 % de altura correcta en mezclas estéreo sintéticas. La primera versión, con el detector monofónico, acertaba el 0 % y se sustituyó tras probarla con un MP3 real.
+- Para entender lo extraído: ▶ en cada frase y "Escuchar toda la melodía", con opción de parar; la forma de cada frase, su minuto en la canción original, el número de notas y la **calidad de la extracción** con consejos.
+- Mejora siguiente: separación de voz con IA (fase 8c) para mezclas mono, densas o con coros.
 
 ## Pruebas
 - `core/songs/songs.test.ts` (34 tests):
@@ -50,7 +52,9 @@ El usuario carga un MP3, M4A o WAV y, opcionalmente, el fragmento ("desde / hast
   - recomendador: grave, aguda, encaja, sin perfil, "no basta con caber" y aprende de la interpretación;
   - dificultad personal, problema por frase, entrenamiento, indicaciones en vivo, y todas las frases de todas las canciones.
 - `core/songs/transcribe.test.ts` (8 tests): notas exactas con voz limpia, desafinación global, vibrato, ruido, frases y tonalidad.
-- E2E (`e2e/songs.spec.ts`): versión recomendada → frase → problema → entrenamiento; frase más débil; importar, practicar y borrar.
+- `core/songs/melody-extraction.test.ts` (10 tests): canción completa en 7 escenarios con umbrales, referencia del método anterior, sílabas repetidas y calidad.
+- `pnpm bench:melody`: tabla comparativa del método anterior frente al nuevo.
+- E2E (`e2e/songs.spec.ts`): versión recomendada → frase → problema → entrenamiento; frase más débil; importar, practicar y borrar; **canción completa estéreo** (voz + instrumentos) → 2 frases de 7 notas, calidad "buena", escuchar y parar.
 
 ## Pendiente
 - [ ] Validar con alumnos que el bucle produce mejora.

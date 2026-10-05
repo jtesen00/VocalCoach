@@ -8,29 +8,64 @@ Spec incremental §16–17. Objetivo: saber **qué hay que cantar en cada instan
 |---|---|---|---|
 | **Escritura manual** (MIDI + pulsos + sílabas en código) | Exacta | Tiempo humano | ✅ Catálogo del MVP (`core/songs/catalog.ts`) |
 | **MIDI / MusicXML / UltraStar** del usuario | Exacta si el archivo es bueno | Bajo (parsers) | Pendiente (ADR-009, fase 8b) |
-| **Transcripción desde audio, en el dispositivo** (pitch tracking con el mismo motor MPM → notas → frases) | Muy buena con voz sola o pistas de voz; aproximada con la mezcla completa | Nulo, offline y privado | ✅ Implementado (`core/songs/transcribe.ts`) |
+| **Extracción de la melodía principal, en el dispositivo** (saliencia armónica + estéreo, estilo Melodia → notas → frases) | Muy buena con voz sola; buena con la mezcla completa en estéreo (ver medición) | Nulo, offline y privado | ✅ Implementado (`core/songs/melody-extraction.ts`) |
 | **Separación de voz** (Demucs v4, MIT; modelos MDX/UVR, licencias variables) + pitch tracking | Buena con la mezcla completa | Alto: modelos de 80–300 MB; segundos o minutos de GPU por canción | Pendiente: servidor o WebGPU (fase 8c) |
 | **Pitch tracking neuronal** sobre la voz separada (CREPE, RMVPE, FCPE, PESTO) | Muy buena, robusta a reverberación | Medio | Opción para 8c |
 | **Transcripción musical automática** polifónica (Basic Pitch de Spotify, Apache-2.0, con versión TF.js; MT3) | Notas de todos los instrumentos: hay que elegir la línea de la voz | Medio | Descartado como fuente principal |
-| **Detección de la voz principal** (salience: Melodia, modelos de *main melody extraction*) | Media en mezclas densas | Medio | Alternativa a la separación |
+| **Detección de la voz principal** (saliencia, Melodia) | Buena; media en mezclas densas o mono | Bajo | ✅ Es el método implementado |
 
 ## Cadena implementada (local)
 
+**Primera versión, descartada:** se aplicaba el detector monofónico del micrófono (MPM) a la mezcla. En una canción con instrumentos acertaba el **0 %** de la melodía (medido), y por eso "no sonaba nada": se extraían pocas notas sueltas.
+
+**Versión actual:** extracción de la melodía principal de música polifónica, estilo **Melodia** (Salamon y Gómez, 2012), en `core/songs/melody-extraction.ts`:
+
 ```
-Archivo de audio (MP3/M4A/WAV… lo que decodifique el navegador)
-  → decodeAudioData → mono, 16 kHz, paso banda 80–2000 Hz (OfflineAudioContext)
-  → Web Worker: MPM (ventana 64 ms, salto 16 ms) + PitchTracker (claridad ≥ 0,9, mediana de 5)
-  → corrección de afinación global (media circular de la desviación, p. ej. 432 Hz)
-  → notas: cambio > 0,6 semitonos durante ≥ 3 frames, duración ≥ 100 ms, saltos de octava sueltos corregidos
-  → frases: silencios ≥ 350 ms; las de más de 8 s se parten por su mayor silencio
-  → tonalidad: Krumhansl–Schmuckler ponderado por duración
-  → Song (60 pulsos por minuto: 1 pulso = 1 s; sin letra: cada frase se identifica por su tiempo "0:12 – 0:18")
+Archivo (MP3/M4A/WAV…) → decodeAudioData → 22,05 kHz en ESTÉREO + paso alto 70 Hz (OfflineAudioContext)
+  → Web Worker:
+     1. STFT (ventana 93 ms, salto 11,6 ms); L y R en una sola FFT compleja.
+     2. Máscara de centro: |M|·m³, con m = 2·Re(L·R*)/(|L|²+|R|²). La voz principal suele ir centrada.
+     3. Picos espectrales (−40 dB) con frecuencia y amplitud interpoladas.
+     4. Saliencia por suma armónica (10 armónicos, α = 0,8, bins de 10 c, 90–1100 Hz)
+        con penalización de suboctava (se exige apoyo de armónicos impares).
+     5. Contornos: continuidad ≤ 80 c, huecos ≤ 100 ms, semillas en picos ≥ 90 % del máximo.
+     6. Voz / no voz, por contorno:
+        · decaimiento tras el ataque > 1/s (bajo, piano, guitarra pulsada) → fuera;
+        · poco centrado en estéreo (< 0,6) → fuera;
+        · armonicidad relativa al archivo (ruido) → fuera;
+        · saliencia < 0,5 × referencia (percentil 75 o contornos con vibrato) → fuera;
+        · el vibrato (4–8 Hz) cuenta como evidencia de voz.
+     7. Octavas duplicadas y valores atípicos respecto a la altura media de la melodía (ventana de 5 s).
+     8. En cada frame, el contorno más saliente (×1,5 con vibrato). Las colas débiles y los huecos
+        dentro del contorno quedan sin voz, lo que separa las sílabas repetidas ("do-do").
+  → notas (corrección de afinación global, cambios > 0,6 semitonos, ≥ 100 ms)
+  → frases (silencios ≥ 0,45 s; las de < 1,5 s se unen a la vecina; las de > 9 s se parten)
+  → tonalidad (Krumhansl–Schmuckler) → Song (60 pulsos por minuto: 1 pulso = 1 s)
 ```
 
-Limitaciones conocidas:
-- Con instrumentos, el detector puede seguir una guitarra o un piano en las partes sin voz. Mitigación: elegir el fragmento ("desde / hasta") y preferir pistas de voz.
-- No hay letra. Alinear la letra (pegarla y repartir sílabas, o reconocimiento de voz) queda para más adelante.
-- No hay detección de tempo: no hace falta para practicar, porque los tiempos son reales.
+### Medición (`pnpm bench:melody`)
+
+Canción sintética con voz centrada (armónicos de vocal, vibrato y pausas entre sílabas), piano a la izquierda, guitarra arpegiada a la derecha **en el registro de la voz**, y bajo y batería al centro. Se ignoran ±50 ms en los bordes de nota.
+
+| Caso | Método anterior: altura | Nuevo: altura | Nuevo: falsos positivos | Nuevo: notas recuperadas |
+|---|---|---|---|---|
+| Estéreo, voz a 0 dB | 0 % | 100 % | 1 % | 100 % |
+| Estéreo, voz a −3 dB | 0 % | 96 % | 7 % | 93 % |
+| Estéreo, voz a −6 dB | 0 % | 92 % | 23 % | 93 % |
+| Mono, voz a 0 dB | 0 % | 98 % | 15 % | 93 % |
+| Voz recta (sin vibrato) | 4 % | 100 % | 4 % | 100 % |
+| Voz grave (−12) | 0 % | 100 % | 5 % | 100 % |
+| Voz grave en **mono** | 0 % | **74 %** | **50 %** | **64 %** |
+| Voz aguda (+7) | 0 % | 95 % | 0 % | 93 % |
+| Notas rápidas | 0 % | 100 % | 2 % | 100 % |
+
+Velocidad: unos 27 ms por segundo de audio en CPU de servidor (una canción de 4 minutos se analiza en ~7 s; en móvil, varias veces más, siempre en segundo plano).
+
+**Límites honestos:**
+- Los datos son **sintéticos**: falta medir con canciones reales con melodía de referencia (MedleyDB o similares, revisando su licencia). Los umbrales pueden necesitar ajuste.
+- **Mono + voz grave** es el peor caso: sin estéreo no se puede aislar el centro, y el piano y la guitarra tocan en el mismo registro.
+- Coros, dobles voces, instrumentos solistas centrados (por ejemplo, un solo de saxo) o mucha reverberación pueden confundir la extracción.
+- No hay letra: cada frase se identifica por su minuto en la canción ("0:12 – 0:18"), su forma melódica y el botón ▶ para escucharla.
 
 ## Siguiente paso recomendado (8c)
 Separación de voz como **trabajo opcional**:

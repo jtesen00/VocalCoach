@@ -37,6 +37,8 @@ export interface Song {
   /** Tonalidad original (para el modo con detalles técnicos). */
   key: { tonic: number; mode: 'mayor' | 'menor' };
   sections: SongSection[];
+  /** Solo en canciones importadas: cómo fue la extracción de la melodía. */
+  extraction?: { quality: 'buena' | 'media' | 'baja'; stereo: boolean; fromS: number; toS: number };
 }
 
 /** Referencia a una frase con su posición en la canción. */

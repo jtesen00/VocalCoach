@@ -12,13 +12,14 @@ _Última actualización: 2026-10-05 · versión 0.2.0 + interfaz sencilla + Fase
 - Interfaz sencilla por defecto, con detalles técnicos opcionales en Ajustes.
 - Fase 4: profesor virtual (diagnóstico, consejos, demostraciones sonoras, siguiente paso y coach en vivo).
 - Fase 8a: canciones, perfil vocal dinámico, tono recomendado, dificultad personal, frases, entrenamiento generado e importación local desde MP3.
-- 187 tests unitarios, 12 E2E y CI.
+- Importación de MP3 rehecha con extracción polifónica (0 % → 92–100 % en mezclas sintéticas estéreo).
+- 197 tests unitarios, 13 E2E y CI.
 
 ## Siguiente
 1. Medir en dispositivos reales (checklist en `docs/benchmarks/README.md`).
 2. Grabar intentos reales con consentimiento; validar el detector y el scoring frente al juicio de un profesor; ajustar umbrales.
 3. Revisar los textos del profesor con un profesor de canto y validar con alumnos el bucle de canciones.
-3b. Mejoras de importación: editar frases o letra; separación de voz (8c).
+3b. Probar la importación con MP3 reales del equipo y ajustar los umbrales; después, editar frases o letra y separación de voz (8c).
 4. Fase 5: progreso local en IndexedDB (incluye el historial que usa el profesor), learning path y mejor resultado por ejercicio.
 
 ## Preguntas abiertas

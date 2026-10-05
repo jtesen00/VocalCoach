@@ -1,10 +1,11 @@
 import { defineConfig } from '@playwright/test';
 import { resolve } from 'node:path';
-import { writeFakeMic, writeMelodyFile } from './e2e/fake-mic';
+import { writeFakeMic, writeMelodyFile, writeSongMixFile } from './e2e/fake-mic';
 
 const fakeMic = resolve(import.meta.dirname, 'e2e/.fixtures/c4-voice.wav');
 writeFakeMic(fakeMic);
 writeMelodyFile(resolve(import.meta.dirname, 'e2e/.fixtures/melodia-prueba.wav'));
+writeSongMixFile(resolve(import.meta.dirname, 'e2e/.fixtures/cancion-completa.wav'));
 
 export default defineConfig({
   testDir: 'e2e',

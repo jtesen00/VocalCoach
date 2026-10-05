@@ -56,6 +56,7 @@ export class AudioEngine {
   private frameListeners = new Set<FrameListener>();
   private snapshotListeners = new Set<() => void>();
   private suppressUntil = 0;
+  private guideNodes: OscillatorNode[] = [];
   private stats = { transport: 0, process: null as number | null, count: 0, windowStart: 0, fps: 0 };
   private snapshot: EngineSnapshot = { status: 'idle', error: null, referencePlaying: false, diagnostics: null };
   private detector: DetectorKind = 'mpm';
@@ -157,8 +158,23 @@ export class AudioEngine {
     const ctx = this.ctx;
     if (!ctx) return { startT: 0, endT: 0, done: Promise.resolve() };
     const startT = ctx.currentTime + 0.05;
-    const endT = scheduleGuide(ctx, events, startT);
+    this.guideNodes = this.guideNodes.filter((n) => n.context === ctx);
+    const endT = scheduleGuide(ctx, events, startT, 440, this.guideNodes);
     return { startT, endT, done: this.suppressUntilTime(endT + REFERENCE_TAIL_S) };
+  }
+
+  /** Corta la guía que esté sonando (p. ej. al escuchar una melodía larga). */
+  stopGuide(): void {
+    const ctx = this.ctx;
+    for (const n of this.guideNodes) {
+      try {
+        n.stop();
+      } catch {
+        /* ya parado */
+      }
+    }
+    this.guideNodes = [];
+    if (ctx) this.suppressUntil = ctx.currentTime;
   }
 
   playReference(midi: number, durationS = 1.2): Promise<void> {

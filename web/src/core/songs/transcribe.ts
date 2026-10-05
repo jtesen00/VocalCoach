@@ -2,13 +2,14 @@ import { createDetector, rmsDb } from '../pitch/detector';
 import { frames as windows } from '../pitch/signals';
 import { median, PitchTracker } from '../pitch/tracker';
 import type { PitchFrame } from '../pitch/types';
+import { extractMelody, type MelodyFrame } from './melody-extraction';
 import type { MelodyNote, Song, SongPhrase, SongSection } from './types';
 
 /**
  * Transcripción de la melodía cantada a partir de un audio (spec §16, nivel local):
- * pitch tracking con el MISMO detector de la app → notas → frases → canción.
- * Funciona bien con voz sola o pistas de voz; con la mezcla completa es aproximada
- * (la separación de voz con IA queda como mejora futura, ver docs/research).
+ * línea melódica principal (melody-extraction.ts, estilo Melodia: funciona con la mezcla
+ * completa) → notas → frases → canción. `trackPitch` (detector monofónico de la app) se
+ * conserva como referencia de comparación: solo sirve para voz sola.
  */
 
 /** Parámetros para audio remuestreado a 16 kHz (ventana de 64 ms, salto de 16 ms). */
@@ -22,7 +23,7 @@ export interface TranscribedNote {
   endS: number;
 }
 
-/** Pista de pitch de un audio completo. `onProgress` recibe 0..1. */
+/** Detector monofónico (el del micrófono) sobre un audio: solo válido para voz sola. Referencia del benchmark. */
 export function trackPitch(samples: Float32Array, sampleRate: number, onProgress?: (p: number) => void): PitchFrame[] {
   const detector = createDetector('mpm', { sampleRate, windowSize: WINDOW, minHz: 70, maxHz: 1100 });
   // Más exigente que en vivo: en una grabación hay instrumentos y reverberación.
@@ -154,6 +155,40 @@ export function estimateKey(notes: readonly TranscribedNote[]): Song['key'] {
   return { tonic: 60 + best.tonic, mode: best.mode };
 }
 
+export interface ExtractionQuality {
+  /** Fracción del audio analizado con voz principal detectada. */
+  voicedRatio: number;
+  /** Centrado estéreo medio de la voz detectada (1 en mono). */
+  center: number;
+  stereo: boolean;
+  level: 'buena' | 'media' | 'baja';
+}
+
+export function extractionQuality(frames: readonly MelodyFrame[], stereo: boolean): ExtractionQuality {
+  const voiced = frames.filter((f) => f.midi !== null);
+  const voicedRatio = frames.length ? voiced.length / frames.length : 0;
+  const center = voiced.length ? voiced.reduce((a, f) => a + f.center, 0) / voiced.length : 0;
+  // Pocas zonas con voz o una voz poco centrada suelen indicar que se siguió a un instrumento.
+  const level = voicedRatio >= 0.3 && (!stereo || center >= 0.8) ? 'buena' : voicedRatio >= 0.12 ? 'media' : 'baja';
+  return { voicedRatio, center, stereo, level };
+}
+
+/**
+ * Audio → notas de la melodía cantada, con la extracción polifónica.
+ * `right` = null para audio mono.
+ */
+export function transcribeAudio(
+  left: Float32Array,
+  right: Float32Array | null,
+  sampleRate: number,
+  onProgress?: (p: number) => void,
+): { notes: TranscribedNote[]; quality: ExtractionQuality } {
+  const line = extractMelody(left, right, sampleRate, { onProgress });
+  const stereo = !!right && !left.every((v, i) => Math.abs(v - right[i]) < 1e-6);
+  const frames: PitchFrame[] = line.map((f) => ({ t: f.t, f0: null, midi: f.midi, clarity: 1, levelDb: 0, voiced: f.midi !== null }));
+  return { notes: segmentNotes(frames), quality: extractionQuality(line, stereo) };
+}
+
 export interface PhraseOptions {
   /** Silencio que separa frases (s). */
   phraseGapS: number;
@@ -163,7 +198,24 @@ export interface PhraseOptions {
   phrasesPerSection: number;
 }
 
-const DEFAULT_PHRASES: PhraseOptions = { phraseGapS: 0.35, maxPhraseS: 8, phrasesPerSection: 4 };
+const DEFAULT_PHRASES: PhraseOptions = { phraseGapS: 0.45, maxPhraseS: 9, phrasesPerSection: 4 };
+
+/** Una frase más corta que esto (o con menos de 3 notas) se une a la vecina si están cerca. */
+const MIN_PHRASE_S = 1.5;
+const MERGE_GAP_S = 1.2;
+
+/** Une frases demasiado cortas con la anterior o la siguiente (respiraciones breves). */
+function mergeShort(groups: TranscribedNote[][]): TranscribedNote[][] {
+  const out: TranscribedNote[][] = [];
+  const dur = (g: TranscribedNote[]) => g[g.length - 1].endS - g[0].startS;
+  for (const g of groups) {
+    const prev = out[out.length - 1];
+    const short = (x: TranscribedNote[]) => dur(x) < MIN_PHRASE_S || x.length < 3;
+    if (prev && (short(g) || short(prev)) && g[0].startS - prev[prev.length - 1].endS < MERGE_GAP_S) prev.push(...g);
+    else out.push([...g]);
+  }
+  return out;
+}
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -194,9 +246,9 @@ export function notesToSong(notes: readonly TranscribedNote[], meta: { id: strin
     if (g && n.startS - g[g.length - 1].endS < o.phraseGapS) g.push(n);
     else groups.push([n]);
   }
-  const phrases: SongPhrase[] = groups
+  const phrases: SongPhrase[] = mergeShort(groups)
     .flatMap((g) => splitLong(g, o.maxPhraseS))
-    .filter((g) => g.length >= 2 && g.reduce((a, n) => a + n.endS - n.startS, 0) >= 0.6)
+    .filter((g) => g.length >= 3 && g.reduce((a, n) => a + n.endS - n.startS, 0) >= 0.8)
     .map((g, i) => ({
       id: `p${i + 1}`,
       lyrics: `${clock(g[0].startS)} – ${clock(g[g.length - 1].endS)}`,

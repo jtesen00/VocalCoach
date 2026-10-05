@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { midiToFreq } from '../music/notes';
 import { tone, VOICE_LIKE_HARMONICS, whiteNoise, withNoise } from '../pitch/signals';
 import { allPhrases } from './melody';
-import { estimateKey, notesToSong, segmentNotes, trackPitch, TRANSCRIBE_SAMPLE_RATE, tuningOffsetCents } from './transcribe';
+import { EXTRACTION_SAMPLE_RATE } from './melody-extraction';
+import { estimateKey, notesToSong, trackPitch, transcribeAudio, tuningOffsetCents } from './transcribe';
 
-const SR = TRANSCRIBE_SAMPLE_RATE;
+const SR = EXTRACTION_SAMPLE_RATE;
 
 /** "Canta" una lista de [midi | null(silencio), segundos] con una voz sintética. */
 function sing(parts: [number | null, number][], detuneCents = 0, vibrato = 0): Float32Array {
@@ -29,7 +30,7 @@ const MELODY: [number | null, number][] = [
 ];
 const EXPECTED = [60, 62, 64, 65, 67, 67, 64, 60];
 
-const transcribe = (audio: Float32Array) => segmentNotes(trackPitch(audio, SR));
+const transcribe = (audio: Float32Array) => transcribeAudio(audio, null, SR).notes;
 
 describe('transcripción de la melodía (importar audio)', () => {
   it('recupera las notas de una voz limpia', () => {
@@ -39,9 +40,8 @@ describe('transcripción de la melodía (importar audio)', () => {
   });
 
   it('corrige una grabación desafinada en bloque (+35 cents, p. ej. otra referencia)', () => {
-    const frames = trackPitch(sing(MELODY, 35), SR);
-    expect(tuningOffsetCents(frames)).toBeCloseTo(35, -1);
-    expect(segmentNotes(frames).map((n) => n.midi)).toEqual(EXPECTED);
+    expect(tuningOffsetCents(trackPitch(sing(MELODY, 35), SR))).toBeCloseTo(35, -1);
+    expect(transcribe(sing(MELODY, 35)).map((n) => n.midi)).toEqual(EXPECTED);
   });
 
   it('el vibrato no parte una nota en varias', () => {
