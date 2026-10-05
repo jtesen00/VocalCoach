@@ -2,7 +2,7 @@ import { McLeodDetector } from './mpm';
 import { YinDetector } from './yin';
 import type { DetectorKind, DetectorOptions, PitchDetector } from './types';
 
-/** Parámetros por defecto validados en el benchmark (docs/PLAN.md §4.2). */
+/** Parámetros por defecto validados en el benchmark (docs/planning/PLAN.md §4.2). */
 export const DEFAULT_DETECTOR_OPTIONS = {
   windowSize: 2048,
   hopSize: 512,

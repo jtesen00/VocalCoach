@@ -4,7 +4,7 @@
  *   pnpm bench                     → señales sintéticas: precisión, errores de octava, falsos positivos y coste
  *   pnpm bench -- voz.wav [ref.csv] → trayectoria de un WAV; con ref.csv (t,hz) calcula RPA contra la referencia
  *
- * Criterios de aceptación: docs/PLAN.md §9.
+ * Criterios de aceptación: docs/planning/PLAN.md §9.
  */
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';

@@ -16,14 +16,14 @@ export interface Tolerance {
   toleranceCents: number;
 }
 
-/** Hipótesis iniciales (docs/PLAN.md §2); se ajustan con grabaciones reales. */
+/** Hipótesis iniciales (docs/planning/PLAN.md §2); se ajustan con grabaciones reales. */
 export const TOLERANCE_BY_LEVEL: Record<SkillLevel, Tolerance> = {
   beginner: { perfectCents: 15, toleranceCents: 30 },
   intermediate: { perfectCents: 10, toleranceCents: 20 },
   advanced: { perfectCents: 5, toleranceCents: 10 },
 };
 
-/** Ataque inicial de cada nota que no se evalúa (docs/PLAN.md §2, punto 4). */
+/** Ataque inicial de cada nota que no se evalúa (docs/planning/PLAN.md §2, punto 4). */
 export const DEFAULT_ATTACK_MS = 250;
 
 export function centsVsTarget(midi: number, targetMidi: number, mode: OctaveMode): number {

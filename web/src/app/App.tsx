@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { audioEngine } from '../audio/engine';
+import { ExercisesPage } from '../features/exercises/ExercisesPage';
 import { RangeCalibration } from '../features/range/RangeCalibration';
 import { TunerPage } from '../features/tuner/TunerPage';
 import { useEngineSnapshot } from '../features/tuner/useEngine';
 import { useSettings } from '../shared/settings';
 
-type View = 'tuner' | 'range';
+type View = 'tuner' | 'exercises' | 'range';
 
 export function App() {
   const [settings, updateSettings] = useSettings();
@@ -25,6 +26,7 @@ export function App() {
         {running && (
           <nav aria-label="Secciones">
             <button aria-current={view === 'tuner' ? 'page' : undefined} onClick={() => setView('tuner')}>Afinador</button>
+            <button aria-current={view === 'exercises' ? 'page' : undefined} onClick={() => setView('exercises')}>Ejercicios</button>
             <button aria-current={view === 'range' ? 'page' : undefined} onClick={() => setView('range')}>Mi rango</button>
           </nav>
         )}
@@ -59,6 +61,8 @@ export function App() {
           </section>
         ) : view === 'tuner' ? (
           <TunerPage settings={settings} updateSettings={updateSettings} onCalibrate={() => setView('range')} />
+        ) : view === 'exercises' ? (
+          <ExercisesPage settings={settings} onCalibrate={() => setView('range')} />
         ) : (
           <RangeCalibration range={settings.range} onSave={(range) => updateSettings({ range })} onDone={() => setView('tuner')} />
         )}

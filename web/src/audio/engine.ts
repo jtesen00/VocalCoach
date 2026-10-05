@@ -3,7 +3,7 @@ import { PitchTracker } from '../core/pitch/tracker';
 import type { DetectorKind, PitchFrame } from '../core/pitch/types';
 import { checkBluetooth, type BluetoothCheck } from './devices';
 import type { PitchProcessorOptions, WorkletMessage } from './pitch-worklet';
-import { playReferenceTone } from './reference-tone';
+import { scheduleClick, scheduleGuide, type GuideEvent } from './guide';
 import workletUrl from './pitch-worklet.ts?worker&url';
 
 export type EngineStatus = 'idle' | 'starting' | 'running' | 'error';
@@ -110,6 +110,7 @@ export class AudioEngine {
       this.ctx.createMediaStreamSource(this.stream).connect(this.node).connect(mute).connect(this.ctx.destination);
 
       this.tracker = new PitchTracker();
+      this.suppressUntil = 0;
       this.stats = { transport: 0, process: null, count: 0, windowStart: performance.now(), fps: 0 };
       this.update({ status: 'running', diagnostics: this.buildDiagnostics() });
     } catch (err) {
@@ -136,22 +137,67 @@ export class AudioEngine {
     if (this.snapshot.diagnostics) this.update({ diagnostics: { ...this.snapshot.diagnostics, detector: kind } });
   }
 
+  /** Reloj del AudioContext (s), o null si el micrófono no está activo. */
+  now(): number | null {
+    return this.ctx?.currentTime ?? null;
+  }
+
+  /** Retardo estimado entre el sonido y el `t` de los frames: media ventana + latencia de entrada. */
+  latencyS(): number {
+    const d = this.snapshot.diagnostics;
+    if (!d) return 0;
+    return (d.algorithmicLatencyMs + (d.inputLatencyMs ?? 0)) / 1000;
+  }
+
   /**
-   * Llamada y respuesta: suena la referencia y, mientras tanto, se ignora el micro
-   * para no detectar el propio tono de referencia. Resuelve cuando el usuario puede cantar.
+   * Llamada y respuesta: suena la guía y, mientras tanto, se ignora el micro
+   * para no detectar la propia referencia. `done` se resuelve cuando el usuario puede cantar.
    */
-  playReference(midi: number, durationS = 1.2): Promise<void> {
+  playGuide(events: readonly GuideEvent[]): { startT: number; endT: number; done: Promise<void> } {
     const ctx = this.ctx;
-    if (!ctx) return Promise.resolve();
-    const end = playReferenceTone(ctx, midi, durationS);
-    this.suppressUntil = end + REFERENCE_TAIL_S;
+    if (!ctx) return { startT: 0, endT: 0, done: Promise.resolve() };
+    const startT = ctx.currentTime + 0.05;
+    const endT = scheduleGuide(ctx, events, startT);
+    return { startT, endT, done: this.suppressUntilTime(endT + REFERENCE_TAIL_S) };
+  }
+
+  playReference(midi: number, durationS = 1.2): Promise<void> {
+    return this.playGuide([{ type: 'note', midi, durationS }]).done;
+  }
+
+  /**
+   * Cuenta atrás con claqueta. Devuelve el instante (reloj del contexto) en que empieza
+   * el canto, un pulso después del último clic. El micro se ignora durante los clics.
+   */
+  countdown(beats: number, beatS: number): { singT: number; beatTimes: number[] } {
+    const ctx = this.ctx;
+    if (!ctx) return { singT: 0, beatTimes: [] };
+    const first = ctx.currentTime + 0.1;
+    const beatTimes = Array.from({ length: beats }, (_, i) => first + i * beatS);
+    let lastEnd = first;
+    beatTimes.forEach((t, i) => (lastEnd = scheduleClick(ctx, t, i === 0)));
+    void this.suppressUntilTime(lastEnd + 0.1);
+    return { singT: first + beats * beatS, beatTimes };
+  }
+
+  private suppressUntilTime(until: number): Promise<void> {
+    const ctx = this.ctx!;
+    this.suppressUntil = Math.max(this.suppressUntil, until);
     this.update({ referencePlaying: true });
     return new Promise((resolve) => {
-      setTimeout(() => {
+      const check = () => {
+        if (this.ctx !== ctx) return resolve();
+        // setTimeout y el reloj de audio derivan unos ms: se reintenta hasta cumplir ambos plazos.
+        const remaining = Math.max(until, this.suppressUntil) - ctx.currentTime;
+        if (remaining > 0.005) {
+          setTimeout(check, remaining * 1000 + 5);
+          return;
+        }
         this.tracker.reset();
         this.update({ referencePlaying: false });
         resolve();
-      }, (this.suppressUntil - ctx.currentTime) * 1000);
+      };
+      check();
     });
   }
 
