@@ -14,4 +14,4 @@ pnpm build
 
 Para probar en un móvil de la misma red: `pnpm dev --host` y abrir la URL por HTTPS (por ejemplo con un túnel), porque `getUserMedia` exige un contexto seguro.
 
-Estructura y decisiones: [docs/PLAN.md](../docs/PLAN.md) y [docs/adr](../docs/adr/README.md). Resultados de medición: [docs/benchmarks](../docs/benchmarks/README.md).
+Estructura y decisiones: [docs/planning/PLAN.md](../docs/planning/PLAN.md) y [docs/adr](../docs/adr/README.md). Resultados de medición: [docs/benchmarks](../docs/benchmarks/README.md).
