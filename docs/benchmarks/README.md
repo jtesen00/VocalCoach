@@ -1,6 +1,6 @@
 # Benchmarks del motor de pitch
 
-Criterios de aceptación: [PLAN.md §9](../PLAN.md#9-testing-y-benchmarks).
+Criterios de aceptación: [PLAN.md §9](../planning/PLAN.md#9-testing-y-benchmarks).
 
 ## 1. Sintético (`cd web && pnpm bench`)
 

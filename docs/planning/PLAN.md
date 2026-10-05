@@ -2,7 +2,7 @@
 
 > Revisión senior del spec original. El spec es sólido; este documento **no lo reescribe**:
 > corrige supuestos débiles, rellena huecos y recorta complejidad innecesaria.
-> Las decisiones formales están en [`docs/adr/`](adr/).
+> Las decisiones formales están en [`docs/adr/`](../adr/).
 
 ---
 
@@ -292,7 +292,7 @@ Medición de latencia: **prueba de bucle** (el altavoz emite un pulso con tono c
 │  └─ e2e/                           # Playwright con micrófono falso (WAV sintético)
 ├─ api/                              # ASP.NET Core — Fase 6 (estructura en ADR-004)
 ├─ ai/                               # servicio Python — Fases 8b/9
-└─ docs/  (PLAN.md, adr/, benchmarks/)
+└─ docs/  (planning/, memory/, adr/, benchmarks/, CHANGELOG.md)
 ```
 
 `core/` no importa de `audio/`, `features/` ni `react`: se ejecuta igual en el worklet, en Vitest y en el benchmark.
@@ -303,7 +303,7 @@ Medición de latencia: **prueba de bucle** (el altavoz emite un pulso con tono c
 |---|---|---|---|
 | 0–1 | Este plan + ADRs | **Hecho** | ADRs aceptados |
 | **2. Prototipo de pitch** | Captura, MPM+YIN, voicing, afinador, calibración de rango, llamada y respuesta, aviso Bluetooth, diagnóstico, benchmark, E2E | **Implementado** — falta medir en dispositivos reales | **Criterios de §9 cumplidos en desktop + 1 Android + 1 iPhone. Si no, no se avanza.** |
-| 3. Ejercicios | Nota sostenida, secuencias, intervalos, sirenas, transposición al rango, scoring | 3 semanas | Evaluación coherente con el juicio de un profesor en ≥ 80 % de 30 intentos grabados |
+| 3. Ejercicios | Nota sostenida, secuencias, intervalos, escalas, sirenas, transposición al rango, scoring, feedback básico | **Implementado** ([detalle](fase-03-ejercicios.md)) — falta validar con grabaciones | Evaluación coherente con el juicio de un profesor en ≥ 80 % de 30 intentos grabados |
 | 4. Profesor | Motor de reglas, mensajes, ejemplos de audio | 1–2 semanas | |
 | 5. Progreso local | IndexedDB (Dexie), learning path, rachas, estadísticas | 2 semanas | |
 | 7. PWA | vite-plugin-pwa, shell offline, instalación, `storage.persist()` | 1 semana | *Se adelanta antes del backend: es barato y el producto ya es 100 % local* |
@@ -340,6 +340,7 @@ Sin Kubernetes, sin microservicios, sin Redis/Kafka, sin SignalR. El único serv
 
 ## 14. Siguiente paso concreto
 
-1. **Medir el prototipo en dispositivos reales** (desktop Chrome/Safari, Android Chrome, iPhone Safari) con la checklist de [`docs/benchmarks/`](benchmarks/README.md).
+1. **Medir el prototipo en dispositivos reales** (desktop Chrome/Safari, Android Chrome, iPhone Safari) con la checklist de [`docs/benchmarks/`](../benchmarks/README.md).
 2. Grabar el primer set de voces reales (con consentimiento) y pasar `pnpm bench -- voz.wav ref.csv`.
-3. Si se cumplen los criterios de §9 → Fase 3 (ejercicios).
+3. Validar la Fase 3 con 30 intentos reales evaluados también por un profesor ([fase-03-ejercicios.md](fase-03-ejercicios.md)).
+4. Fase 4 (profesor virtual) y Fase 5 (progreso local). Estado actualizado en [ROADMAP.md](ROADMAP.md).

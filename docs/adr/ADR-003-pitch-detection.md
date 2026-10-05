@@ -13,4 +13,4 @@
 - **CREPE / modelos neuronales (ONNX/TF.js):** más robustos con ruido, pero coste de descarga, CPU y batería en móvil. **Plan B** si el DSP no cumple los criterios con ruido; candidatos ligeros (p. ej. PESTO) primero.
 
 ## Criterios de éxito
-Ver `docs/PLAN.md` §9.
+Ver `docs/planning/PLAN.md` §9.
