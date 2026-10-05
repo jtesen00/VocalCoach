@@ -17,30 +17,51 @@ Lo que cambio:
 | Fase 0 (investigación) | Investigación amplia antes de codificar | **Timebox de 1 semana.** El prototipo *es* la investigación: las preguntas difíciles (latencia real, ruido, iOS) solo se responden midiendo. |
 | Estructura | `packages/` con 5 paquetes desde el día 1 | **Una sola app Vite** con carpetas `src/core` y `src/audio` sin dependencias de React (regla de lint). Se extraen a paquetes cuando exista un segundo consumidor. |
 | `PitchFrame` | `cents` relativo a la nota más cercana | El motor emite **MIDI continuo (float)**. Los cents respecto al *objetivo* los calcula el scoring. Son cosas distintas (ver §4). |
-| Backend | ASP.NET con capas Api/Application/Domain/Infrastructure + EF Core + Dapper | **Monolito modular** en un solo proyecto, organizado por features. Solo EF Core; Dapper únicamente si una consulta medida lo requiere. |
+| Backend | ASP.NET con capas + EF Core + Dapper | **Se mantiene y se formaliza** (decisión del equipo): monolito modular, Clean Architecture por módulo, vertical slices, domain events, EF Core para comandos y Dapper para consultas. Ver ADR-004. |
 | Cola de trabajos IA | Implícita | **Tabla en PostgreSQL como cola** (`SELECT … FOR UPDATE SKIP LOCKED`). Sin Redis, sin Kafka. |
 | UI en tiempo real | React con updates throttled | La trayectoria de pitch se dibuja en **Canvas con `requestAnimationFrame`**, fuera del ciclo de render de React. React solo recibe estado de baja frecuencia. |
 
 ---
 
-## 2. Huecos y ambigüedades del spec (requisitos que faltan)
+## 2. Requisitos añadidos al spec (decididos)
 
-Estos puntos **cambian el producto** y deben resolverse antes de la Fase 3:
+Estos puntos faltaban en el spec original. **Están decididos** y los marcados con ✅ ya están implementados en el prototipo.
 
-1. **Rango vocal del usuario.** No se menciona. Un hombre no puede cantar un ejercicio en C5 ni una mujer cómodamente en C3. Hace falta una **calibración de rango** (nota más grave/aguda cómoda) y **transponer los ejercicios** al rango del usuario. Sin esto, la tasa de fallo de principiantes será altísima por motivos que no son de afinación.
-2. **Errores de octava.** ¿Cantar C3 cuando el objetivo es C4 es un error? Para principiantes debería ser configurable (modo "clase de nota" vs. "octava exacta"). Además, los detectores de pitch cometen errores de octava: hay que distinguirlos de errores del usuario.
-3. **Cómo oye el usuario la nota objetivo.** El spec no dice cómo se reproduce la referencia. Si suena por altavoz mientras el micro escucha, **el detector detectará el tono de referencia, no la voz**. Opciones (elegir una para MVP):
-   - **Llamada y respuesta** (recomendado para MVP): suena la referencia → silencio → el usuario canta. Funciona en cualquier dispositivo.
-   - Auriculares obligatorios para ejercicios con acompañamiento simultáneo.
-   - Desactivar la detección mientras suena la referencia.
-4. **Definición de "accuracy" (el 80% para desbloquear).** Propuesta: *% de frames con voz dentro de la tolerancia, excluyendo los primeros ~200–300 ms de cada nota* (el ataque/"scoop" inicial es natural y no debe penalizar).
-5. **"Día" del learning path.** ¿Se desbloquea por completar o por calendario? Recomendación: por completar; el calendario solo afecta a la racha.
-6. **Tolerancia por nivel.** ±15 cents es exigente para principiantes. Propuesta inicial: principiante ±30, intermedio ±20, avanzado ±10. Validar con grabaciones reales.
-7. **Auriculares Bluetooth.** Al usar el micro de un headset Bluetooth, el sistema cambia a perfil HFP (8–16 kHz, latencia de 150–300 ms+). Hay que **detectarlo y advertir**: recomendar micro del dispositivo o auriculares con cable.
-8. **"Muéstrame cómo cantar 'Hola, ¿cómo estás?'"** — un texto sin melodía no define cómo cantarlo. La funcionalidad necesita **texto + melodía** (elegida de una plantilla o generada). Es un requisito de producto, no de IA.
-9. **Referencia de afinación** (A4 = 440 Hz) — configurable, valor por defecto 440.
+| # | Requisito | Decisión | Estado |
+|---|---|---|---|
+| 1 | **Rango vocal del usuario** | Calibración al empezar: nota más grave y más aguda cómodas (mediana de ~2 s sostenidos). El objetivo por defecto es el centro del rango; los ejercicios se **transponen** al rango (`transpositionToFit`). | ✅ calibración + objetivo por defecto · transposición lista para Fase 3 |
+| 2 | **El micro capta la referencia** | **Llamada y respuesta**: suena la nota (1,2 s) → se ignora el micro mientras suena y 150 ms más → el usuario canta. | ✅ |
+| 3 | **Errores de octava** | Configurable: *Cualquier octava vale* (por defecto para principiantes) u *Octava exacta*. | ✅ |
+| 4 | **"80 % de accuracy"** | % de frames con voz dentro de la tolerancia del nivel, **sin contar los primeros 250 ms** de cada nota. Umbral de superación: 80 %. | ✅ en el afinador (intento en curso y último intento) |
+| 5 | **Micro Bluetooth** | Heurística: frecuencia de muestreo de la pista ≤ 16 kHz o nombre del dispositivo → aviso visible recomendando micro del dispositivo o auriculares con cable. | ✅ |
+| 6 | **"Muéstrame cómo cantar este texto"** | La funcionalidad recibe **texto + melodía** (plantilla, melodía generada o importada), nunca solo texto. | Fase 9 |
+| 7 | **Importar canciones (karaoke)** | Ver §2.1. | Fase 8 |
+| — | Tolerancia por nivel | Principiante ±30 c (perfecto ±15), intermedio ±20 c (±10), avanzado ±10 c (±5). A validar con grabaciones reales. | ✅ |
+| — | Referencia A4 | 440 Hz por defecto; el núcleo ya acepta otra referencia. | parcial |
+| — | "Día" del learning path | Se desbloquea al completar (≥ 80 %); el calendario solo afecta a la racha. | Fase 5 |
 
----
+### 2.1 Importar canciones (modo karaoke)
+
+**Objetivo:** el usuario carga una canción que quiere cantar y ve en tiempo real, sobre la línea de la melodía, si va afinado, con puntuación por frase y final.
+
+Un MP3 por sí solo **no** contiene la melodía de la voz como dato: es una mezcla de voz e instrumentos. Para puntuar hace falta una melodía objetivo. Por eso hay tres niveles:
+
+| Nivel | Qué carga el usuario | Cómo se obtiene la melodía | Dónde se procesa | Cuándo |
+|---|---|---|---|---|
+| **A. Canción + melodía** | Audio (MP3/M4A/WAV) + archivo de melodía: **UltraStar `.txt`** (formato karaoke estándar: notas, tiempos y letra), **MIDI `.mid`** o, más adelante, MusicXML | Se lee del archivo | **100 % en el dispositivo**, sin internet | Fase 8a |
+| **B. Solo audio, modo libre** | Solo audio | No hay melodía: se muestra la trayectoria del usuario sobre la música, sin puntuación | Dispositivo | Fase 8a |
+| **C. Solo audio, melodía automática** | Solo audio | **Separación de la voz** (modelo tipo Demucs) + detección de pitch sobre la voz separada → melodía objetivo editable; la letra puede alinearse por reconocimiento de voz | **Servidor (GPU)**, opcional y con consentimiento; se puede evaluar en el navegador con WebGPU más adelante | Fase 8b |
+
+Reglas del modo karaoke:
+
+- **Auriculares obligatorios.** Si la música suena por altavoz, el micro la capta y la detección se contamina (mismo problema que el punto 2, pero sin poder hacer llamada y respuesta). Se pide confirmación antes de empezar; el modo altavoz con cancelación de eco queda como experimento medido, no como promesa.
+- **Sincronización:** el tiempo del usuario se corrige con la latencia de entrada y salida (`outputLatency`) y un **test de calibración** (dar palmadas o cantar sobre un clic). Ventana de tolerancia temporal ±100–150 ms por nota.
+- **Octava:** detección automática de si el usuario canta una octava por debajo/encima (hombre cantando una canción de mujer y viceversa) y comparación por clase de nota o con desplazamiento de octava fijo.
+- **Tonalidad:** transponer la *melodía objetivo* es trivial; transponer el *audio* (pitch shifting) se deja para más adelante.
+- **Puntuación:** por nota (accuracy como en el punto 4, con ataque excluido), por frase y total. UI con barras de notas en el tiempo (estilo UltraStar), trayectoria del usuario encima y la letra de la frase actual.
+- **Copyright y privacidad:** los archivos del usuario se procesan y guardan **solo en su dispositivo** (IndexedDB/OPFS), no se suben ni se comparten. La app no distribuye canciones ni letras comerciales. En el nivel C el audio se sube solo con consentimiento explícito, se procesa, se borra y el usuario declara tener derecho a usarlo; solo se conserva la melodía derivada, privada para ese usuario.
+
+Decisión formal: ADR-009.
 
 ## 3. Stack — matrices de decisión (resumen)
 
@@ -58,7 +79,7 @@ Por qué: lo crítico (audio) es **independiente del framework**, así que la de
 
 **Estado:** `useSyncExternalStore` sobre el motor de audio + `useReducer` para ejercicios. **Zustand** solo cuando aparezca estado global real (perfil, progreso) — probablemente en Fase 5. Nada de Redux.
 
-### 3.2 Backend → **ASP.NET Core (.NET 10 LTS)** (se mantiene, con condición)
+### 3.2 Backend → **ASP.NET Core (.NET 10 LTS)** (se mantiene)
 
 | Criterio | .NET | Node/TS | Go | Python/FastAPI |
 |---|---|---|---|---|
@@ -69,7 +90,9 @@ Por qué: lo crítico (audio) es **independiente del framework**, así que la de
 | Integración IA | Por HTTP a servicio aparte | Por HTTP | Por HTTP | Nativa |
 | Familiaridad del equipo | **Decisiva** | | | |
 
-Por qué: el backend aquí es CRUD + sync + orquestación de trabajos. Cualquiera sirve. **.NET se justifica si el equipo ya lo domina** (el spec lo sugiere). Si el equipo fuera solo frontend, Node/TS compartiendo tipos con el cliente sería la opción más productiva. Python no aporta nada en el API: solo en el servicio de IA (Fase 9).
+Por qué: el backend gestiona usuarios, progreso, catálogo, sincronización y trabajos de IA durante años: merece una estructura sólida. .NET ofrece el mejor soporte para Clean Architecture con módulos aislados (EF Core, Identity, BackgroundService, tests de arquitectura) y el equipo lo domina. Python solo aparece en el servicio de IA (Fase 9).
+
+**Arquitectura (ADR-004):** monolito modular · Clean Architecture por módulo (Domain / Application / Infrastructure / Presentation) · vertical slices dentro de Application · domain events dentro del módulo e integration events entre módulos mediante outbox en PostgreSQL · EF Core para comandos y Dapper para consultas. Sin microservicios ni broker de mensajes.
 
 ### 3.3 Detección de pitch → **McLeod (MPM) en TypeScript, en el AudioWorklet** (ver §4)
 
@@ -186,7 +209,7 @@ PWA primero (se mantiene). Riesgos concretos a **medir en la Fase 2**, no supone
 | El audio se para al bloquear pantalla / cambiar de app | iOS, Android | Aceptarlo; Wake Lock API durante el ejercicio; reanudar al volver |
 | Switch de silencio silencia la reproducción de Web Audio | iOS | `navigator.audioSession.type = 'play-and-record'` (Safari 17+); aviso en la UI |
 | Procesado de audio forzado ignorando las restricciones | Algunos Android | Detectar en el benchmark; listar dispositivos problemáticos |
-| Micro Bluetooth (HFP) | Todas | Advertir (ver §2.7) |
+| Micro Bluetooth (HFP) | Todas | Advertir (ver §2, punto 5) ✅ |
 | Safari borra almacenamiento de PWAs no instaladas tras ~7 días sin uso | iOS | `navigator.storage.persist()`, incentivar instalación, sync con backend (Fase 6) |
 | Latencia de entrada alta | Android gama baja | Medir; mostrar la latencia en diagnóstico; compensarla en ejercicios con timing |
 
@@ -250,43 +273,43 @@ Medición de latencia: **prueba de bucle** (el altavoz emite un pulso con tono c
 
 ---
 
-## 10. Estructura del proyecto (inicial)
+## 10. Estructura del proyecto
 
 ```
 /
-├─ web/                         # app Vite (única app hasta Fase 6)
+├─ web/                              # app Vite (implementada en Fase 2)
 │  ├─ src/
-│  │  ├─ core/                  # TS puro, sin React ni APIs del navegador
-│  │  │  ├─ music/              # nota↔frecuencia, escalas, transposición
-│  │  │  ├─ pitch/              # MPM, YIN, tracker (voicing, suavizado)
-│  │  │  ├─ scoring/            # evaluaciones por tipo de ejercicio
-│  │  │  └─ teacher/            # motor de reglas + reglas declarativas
-│  │  ├─ audio/                 # lo que toca Web Audio: engine, worklet, reproducción de referencia
-│  │  ├─ features/              # tuner/, exercises/, teacher/, progress/, settings/ …
-│  │  ├─ shared/ui/             # sistema de diseño
-│  │  └─ app/                   # rutas, layout, providers
-│  └─ bench/                    # arnés de benchmark en Node
-├─ api/                         # ASP.NET Core — aparece en Fase 6
-├─ ai/                          # servicio Python — aparece en Fase 9
+│  │  ├─ core/                       # TS puro, sin React ni APIs del navegador
+│  │  │  ├─ music/notes.ts           # nota ↔ frecuencia ↔ MIDI continuo
+│  │  │  ├─ pitch/                   # FFT, MPM, YIN, PitchTracker (voicing, mediana), señales sintéticas
+│  │  │  ├─ scoring/                 # cents vs objetivo, modos de octava, tolerancias, accuracy
+│  │  │  └─ range/                   # rango vocal y transposición
+│  │  ├─ audio/                      # Web Audio: engine, pitch-worklet, nota de referencia, Bluetooth
+│  │  ├─ features/tuner/ range/      # pantallas (karaoke/, exercises/, progress/ en fases siguientes)
+│  │  ├─ shared/                     # ajustes, UI compartida
+│  │  └─ app/                        # shell, estilos (tokens claro/oscuro)
+│  ├─ bench/                         # benchmark Node con el mismo código que el worklet
+│  └─ e2e/                           # Playwright con micrófono falso (WAV sintético)
+├─ api/                              # ASP.NET Core — Fase 6 (estructura en ADR-004)
+├─ ai/                               # servicio Python — Fases 8b/9
 └─ docs/  (PLAN.md, adr/, benchmarks/)
 ```
 
-Regla de lint (`eslint-plugin-boundaries` o `no-restricted-imports`): `core/` no importa de `audio/`, `features/` ni `react`.
-
----
+`core/` no importa de `audio/`, `features/` ni `react`: se ejecuta igual en el worklet, en Vitest y en el benchmark.
 
 ## 11. Roadmap (1 desarrollador, estimación orientativa)
 
 | Fase | Contenido | Estimación | Puerta de salida |
 |---|---|---|---|
-| 0–1 | Este plan + ADRs | **Hecho / 1 semana máx.** | ADRs aceptados |
-| **2. Prototipo de pitch** | Captura, MPM+YIN, voicing, afinador visual, panel de diagnóstico, benchmark | 2–3 semanas | **Criterios de §9 cumplidos en desktop + 1 Android + 1 iPhone. Si no, no se avanza.** |
-| 3. Ejercicios | Calibración de rango, nota sostenida, secuencias, referencia llamada/respuesta, scoring | 3 semanas | Evaluación coherente con el juicio de un profesor en ≥ 80 % de 30 intentos grabados |
+| 0–1 | Este plan + ADRs | **Hecho** | ADRs aceptados |
+| **2. Prototipo de pitch** | Captura, MPM+YIN, voicing, afinador, calibración de rango, llamada y respuesta, aviso Bluetooth, diagnóstico, benchmark, E2E | **Implementado** — falta medir en dispositivos reales | **Criterios de §9 cumplidos en desktop + 1 Android + 1 iPhone. Si no, no se avanza.** |
+| 3. Ejercicios | Nota sostenida, secuencias, intervalos, sirenas, transposición al rango, scoring | 3 semanas | Evaluación coherente con el juicio de un profesor en ≥ 80 % de 30 intentos grabados |
 | 4. Profesor | Motor de reglas, mensajes, ejemplos de audio | 1–2 semanas | |
 | 5. Progreso local | IndexedDB (Dexie), learning path, rachas, estadísticas | 2 semanas | |
 | 7. PWA | vite-plugin-pwa, shell offline, instalación, `storage.persist()` | 1 semana | *Se adelanta antes del backend: es barato y el producto ya es 100 % local* |
 | 6. Backend | API .NET, Postgres, auth, sync de intentos | 3–4 semanas | |
-| 8. Canciones | Modelo de canción, timeline, scoring por frase, contenido propio/dominio público | 4+ semanas | |
+| 8a. Canciones / karaoke local | Modelo de canción, importación audio + UltraStar/MIDI, modo libre, timeline, calibración de latencia, scoring por frase; catálogo propio/dominio público | 4–5 semanas | Puntuación estable entre repeticiones del mismo intento |
+| 8b. Melodía automática | Separación de voz + extracción de melodía como trabajo en servidor (opcional) | 3–4 semanas | Melodía extraída utilizable sin edición en ≥ 70 % de canciones de prueba |
 | 9. IA | Ver §7 | Investigación separada | |
 
 **Sync (Fase 6) sin complicarse:** los intentos son **inmutables y append-only** con UUID generado en el cliente → `POST` idempotente, sin resolución de conflictos. Solo ajustes/perfil usan last-write-wins.
@@ -299,7 +322,7 @@ Regla de lint (`eslint-plugin-boundaries` o `no-restricted-imports`): `core/` no
 |---|---|---|
 | Fases 2–5, 7 | Hosting estático con HTTPS (Cloudflare Pages / Netlify / similar) | ~0 € |
 | Fase 6 | 1 contenedor .NET + Postgres gestionado + backups | 20–60 € |
-| Fase 9 | + almacenamiento de objetos (R2/S3) + GPU serverless por uso | variable, con cuota por usuario |
+| Fases 8b y 9 | + almacenamiento de objetos (R2/S3) + GPU serverless por uso | variable, con cuota por usuario |
 
 Sin Kubernetes, sin microservicios, sin Redis/Kafka, sin SignalR. El único servicio adicional justificado es el de IA, por el runtime (Python/GPU).
 
@@ -308,12 +331,15 @@ Sin Kubernetes, sin microservicios, sin Redis/Kafka, sin SignalR. El único serv
 ## 13. Riesgos principales (ordenados)
 
 1. **Calidad del pitch en móviles reales** (procesado forzado, latencia, Bluetooth). → Fase 2 con dispositivos reales antes de nada.
-2. **Ejercicios fuera del rango del usuario** → calibración de rango (§2.1).
-3. **El micro capta la referencia** → llamada y respuesta (§2.3).
+2. **Ejercicios fuera del rango del usuario** → calibración de rango (§2, punto 1) ✅.
+3. **El micro capta la referencia** → llamada y respuesta (§2, punto 2) ✅.
 4. **Feedback injusto que frustra** (ataque, vibrato, octavas) → mediana, descarte del ataque, tolerancias por nivel, validación contra juicio humano.
-5. **Contenido con copyright** → solo contenido propio / dominio público hasta tener licencias.
-6. **Expectativas de IA** → la IA no es parte de la propuesta de valor del MVP.
+5. **Contenido con copyright** → catálogo solo propio / dominio público; las canciones importadas por el usuario se quedan en su dispositivo.
+6. **Karaoke por altavoz** → auriculares obligatorios en modo karaoke.
+7. **Expectativas de IA** → la IA no es parte de la propuesta de valor del MVP.
 
 ## 14. Siguiente paso concreto
 
-Arrancar la **Fase 2**: scaffold Vite + TS, `core/music` y `core/pitch` con tests sintéticos, AudioWorklet, afinador con panel de diagnóstico (f0, nota, cents, clarity, nivel, latencia, ms por frame) y arnés de benchmark.
+1. **Medir el prototipo en dispositivos reales** (desktop Chrome/Safari, Android Chrome, iPhone Safari) con la checklist de [`docs/benchmarks/`](benchmarks/README.md).
+2. Grabar el primer set de voces reales (con consentimiento) y pasar `pnpm bench -- voz.wav ref.csv`.
+3. Si se cumplen los criterios de §9 → Fase 3 (ejercicios).
