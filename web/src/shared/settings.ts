@@ -1,0 +1,40 @@
+import { useCallback, useState } from 'react';
+import type { DetectorKind } from '../core/pitch/types';
+import type { VocalRange } from '../core/range/vocal-range';
+import type { OctaveMode, SkillLevel } from '../core/scoring/pitch-scoring';
+
+export interface Settings {
+  range: VocalRange | null;
+  level: SkillLevel;
+  octaveMode: OctaveMode;
+  detector: DetectorKind;
+}
+
+const DEFAULTS: Settings = { range: null, level: 'beginner', octaveMode: 'pitch-class', detector: 'mpm' };
+const KEY = 'vocalcoach.settings.v1';
+
+function load(): Settings {
+  try {
+    const raw = localStorage.getItem(KEY);
+    return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) } : DEFAULTS;
+  } catch {
+    return DEFAULTS;
+  }
+}
+
+/** Ajustes locales. En la Fase 5 pasan a IndexedDB junto con el progreso. */
+export function useSettings(): [Settings, (patch: Partial<Settings>) => void] {
+  const [settings, setSettings] = useState(load);
+  const update = useCallback((patch: Partial<Settings>) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      try {
+        localStorage.setItem(KEY, JSON.stringify(next));
+      } catch {
+        /* almacenamiento no disponible: los ajustes duran la sesión */
+      }
+      return next;
+    });
+  }, []);
+  return [settings, update];
+}
