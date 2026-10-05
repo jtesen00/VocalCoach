@@ -147,8 +147,8 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 
 @media (max-width: 480px) {
   .mic { margin-left: 0; }
-  .topbar nav { width: 100%; justify-content: space-between; }
-  .topbar nav button { padding: 0.4rem 0.55rem; font-size: 0.95rem; }
+  .topbar nav { width: 100%; flex-wrap: wrap; gap: 0.15rem; }
+  .topbar nav button { padding: 0.35rem 0.5rem; font-size: 0.92rem; }
   .diagnostics dl { grid-template-columns: 1fr; }
   .diagnostics dd { margin-bottom: 0.35rem; }
 }
@@ -250,3 +250,53 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .teacher-next { margin-top: 0.9rem !important; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .teacher-next p { flex-basis: 100%; margin: 0; }
 .live-tip { min-height: 1.5em; margin: -12px 0 14px; font-size: 0.98rem; }
+
+/* Canciones */
+.songs h2, .song h2 { margin-top: 0.2rem; }
+.lyrics { font-size: 1.35rem; font-weight: 600; margin: 0.2rem 0 0.6rem; }
+.version-card, .difficulty-card, .weak-card { margin: 16px 0; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.version-card { border-left: 4px solid var(--good); }
+.weak-card { border-left: 4px solid var(--accent); }
+.weak-card h3 { margin: 0.2rem 0; }
+.version-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.warnings { list-style: none; padding: 0; margin: 0 0 12px; }
+.warnings li { padding: 0.45rem 0.8rem; border-left: 3px solid var(--accent); background: var(--surface); margin-bottom: 6px; }
+.difficulty-card dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; margin: 6px 0; }
+.difficulty-card dt { color: var(--muted); }
+.difficulty-card dd { margin: 0; }
+.stars-row { letter-spacing: 0.08em; }
+.stars-row .on { color: var(--accent); }
+.stars-row .off { color: var(--line); }
+.song-section h3 { margin: 18px 0 6px; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.phrase-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.phrase-list li { display: grid; grid-template-columns: 4.6rem 1fr auto auto; gap: 0.75rem; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.phrase-num { color: var(--muted); font-size: 0.85rem; }
+.phrase-last { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.phrase-last.pass, .status-good strong, .status-good span[aria-hidden] { color: var(--good); }
+.phrase-last.fair, .status-fair strong, .status-fair span[aria-hidden] { color: var(--accent); }
+.phrase-last.fail, .status-weak strong, .status-weak span[aria-hidden] { color: var(--off); }
+.song-cue { min-height: 1.6em; margin: 8px 0 0; font-size: 1.15rem; font-weight: 600; }
+.cue-perfect { color: var(--good); }
+.cue-close { color: var(--close); }
+.cue-too_low, .cue-too_high { color: var(--off); }
+.phrase-result { margin-top: 16px; }
+.phrase-score { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.6rem; font-size: 1.1rem; }
+.phrase-score strong { font: 700 2.4rem/1 var(--mono); }
+.improvement { color: var(--good); font-weight: 600; }
+.training-steps { padding-left: 1.3rem; margin: 10px 0 18px; }
+.training-steps li { margin: 0.2rem 0; }
+.training-steps .current button { font-weight: 700; text-decoration: none; color: var(--ink); }
+.training-steps .done button { color: var(--muted); }
+.training .runner, .training .phrase-practice { border-top: 1px solid var(--line); padding-top: 12px; }
+.training .runner .back, .training .phrase-practice .back { display: none; }
+.training-nav { margin-top: 18px; }
+.import-song { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); }
+.import-song ul.hint { padding-left: 1rem; }
+.file-field input { max-width: 100%; }
+input.time { width: 5.5rem; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 0.3rem 0.5rem; }
+.import-song progress { width: 100%; }
+@media (max-width: 480px) {
+  .phrase-list li { grid-template-columns: 1fr auto; gap: 0.3rem 0.75rem; }
+  .phrase-num { grid-column: 1 / -1; }
+  .phrase-list li > button { grid-column: 1 / -1; justify-self: start; }
+}

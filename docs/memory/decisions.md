@@ -2,6 +2,16 @@
 
 Formato: fecha · decisión · motivo · referencia. Lo más reciente arriba.
 
+## 2026-10-05 (madrugada) · Entrenamiento por canción
+- **Se adelanta la Fase 8a** (canciones) por ser el diferenciador del producto. · Actualización incremental del spec. · [ADR-010](../adr/ADR-010-song-training.md)
+- **Una frase es un `ExercisePlan`**: se reutilizan el motor de pitch, la evaluación, la UI y el profesor; no hay un detector distinto para canciones. · Spec §18.
+- **Tono recomendado por acierto esperado, no por "que quepa"**, y lo cantado de verdad en cada tono pesa cada vez más. · Spec §6–8.
+- **Zona cómoda = notas con ≥ 80 % y estables en ≥ 2 intentos distintos**; la medición inicial solo es el punto de partida. · Spec §4: nunca por una nota aislada.
+- **La versión se fija al empezar a practicar.** · Si no, el aprendizaje cambiaba el tono a mitad de la práctica (bug encontrado en E2E).
+- **Sin canciones comerciales en el catálogo**, ni siquiera la melodía escrita a mano: tiene derechos. · Spec §15.
+- **Importar MP3 en local** (petición del equipo): se extrae la melodía en el dispositivo, uso personal y educativo confirmado por el usuario, el audio no se sube, no se guarda y no se reproduce. Se canta con el original fuera de la app (YouTube). · [investigación](../research/fuentes-de-melodia.md)
+- **Datos de perfil y canciones en `localStorage`** de momento: son pequeños. Pasan a IndexedDB en la Fase 5.
+
 ## 2026-10-05 (noche) · Fase 4
 - **El profesor es determinista y basado en reglas, sin LLM:** diagnóstico (taxonomía con prioridad), lecciones como datos y árbol de decisión. · Predecible, gratis, offline y testeable; un LLM no aporta para corregir afinación y no puede escuchar el audio. · [fase-04](../planning/fase-04-profesor-virtual.md)
 - **Un solo problema principal por intento**, más un máximo de 2 observaciones secundarias sin redundancias. · Un alumno principiante no puede corregir cinco cosas a la vez.

@@ -10,5 +10,8 @@ Escalera de menor a mayor riesgo; cada peldaño solo si el anterior demuestra va
 
 Texto → canto directo con la voz del usuario: **descartado** (inmaduro, caro, riesgo legal).
 
+## Ampliación (spec incremental §17)
+La entrada de una demostración puede ser también **frase de canción + melodía objetivo (ADR-010) + características vocales del usuario**. Mismo orden y mismas salvaguardas; no se implementa antes de que el entrenamiento por canción funcione.
+
 ## Consecuencias
 El producto no depende de la IA. La funcionalidad exige **texto + melodía**, nunca solo texto.

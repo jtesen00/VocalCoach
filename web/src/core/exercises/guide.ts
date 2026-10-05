@@ -12,11 +12,16 @@ const SUSTAINED_GUIDE_S = 1.5;
 /** Guía de un ejercicio. `tempo` < 1 la hace más lenta (útil en las demostraciones). */
 export function guideEvents(plan: ExercisePlan, tempo = 1): GuideEvent[] {
   if (plan.def.kind === 'sustained') return [{ type: 'note', midi: plan.rootMidi, durationS: SUSTAINED_GUIDE_S / tempo }];
-  return plan.segments.map((s) =>
-    s.fromMidi === s.toMidi
-      ? { type: 'note', midi: s.fromMidi, durationS: (s.endS - s.startS) / tempo }
-      : { type: 'glide', fromMidi: s.fromMidi, toMidi: s.toMidi, durationS: (s.endS - s.startS) / tempo },
-  );
+  const out: GuideEvent[] = [];
+  let t = 0;
+  for (const s of plan.segments) {
+    // Los silencios entre notas (frases de canciones) se respetan.
+    if (s.startS > t + 1e-6) out.push({ type: 'rest', durationS: (s.startS - t) / tempo });
+    const durationS = (s.endS - s.startS) / tempo;
+    out.push(s.fromMidi === s.toMidi ? { type: 'note', midi: s.fromMidi, durationS } : { type: 'glide', fromMidi: s.fromMidi, toMidi: s.toMidi, durationS });
+    t = s.endS;
+  }
+  return out;
 }
 
 export function guideDuration(events: readonly GuideEvent[]): number {

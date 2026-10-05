@@ -7,6 +7,8 @@ import type { PitchFrame } from '../../core/pitch/types';
 import { TOLERANCE_BY_LEVEL } from '../../core/scoring/pitch-scoring';
 import type { Settings } from '../../shared/settings';
 import { recordAttempt } from './history';
+import { recordEvaluation } from '../../core/profile/vocal-profile';
+import { profileStore } from '../../shared/profile-store';
 
 export type RunPhase = 'ready' | 'listening' | 'countdown' | 'singing' | 'result';
 
@@ -101,6 +103,8 @@ export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
       startT: singT,
       latencyS: timingRef.current.latencyS,
     });
+    // El perfil vocal aprende de cada intento (ejercicios y frases de canciones).
+    profileStore.update((p) => recordEvaluation(p, evaluation, settings.octaveMode));
     setState({ phase: 'result', beat: null, evaluation, previous: recordAttempt(plan.def.id, evaluation) });
   }, [plan, settings.level, settings.octaveMode]);
 

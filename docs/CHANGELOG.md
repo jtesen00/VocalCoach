@@ -4,6 +4,30 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Añadido — Entrenamiento por canción (Fase 8a, adelantada)
+- **Pestaña Canciones** con 4 canciones seguras: Estrellita y Martinillo (tradicionales), Oda a la alegría (melodía de dominio público con letra original) y Luz de puerto (original). La melodía está escrita como datos: notas, pulsos y sílabas.
+- **Perfil vocal dinámico** (`core/profile/vocal-profile.ts`):
+  - Rangos detectado, fiable y cómodo, que aprenden de cada ejercicio y frase.
+  - Rendimiento por registro, errores frecuentes y saltos difíciles.
+- **Tono recomendado** (`core/songs/key.ts`):
+  - Elige la tonalidad (±12 semitonos) con mayor acierto esperado según tu historial de notas, estabilidad, saltos y notas largas, y aprende de cómo cantas de verdad en cada tonalidad.
+  - Interfaz "Tu versión recomendada / Probar versión original"; con detalles técnicos, las tonalidades y los semitonos.
+- **Análisis de rango de la canción** con avisos por sección y **dificultad para ti**: afinación, rango, notas agudas, saltos y ritmo, con estrellas.
+- **Práctica por frases:**
+  - Letra bajo cada nota en la línea de la melodía e **indicaciones en vivo** ("↓ Un poco bajo: sube un poco", "La melodía sube ↑ prepárate").
+  - Puntuación ✓ ⚠ ✗, **problema principal**, **frase más débil** y medición de la mejora ("Antes 51 % → ahora 74 %").
+- **De la frase al entrenamiento** (`core/songs/training.ts`): progresión de ejercicios en las alturas exactas de la frase y del tono elegido. Por ejemplo, para un salto: mitad → mitad → completo → sostener → frase lenta → frase normal.
+- **Importar una canción desde audio** (MP3, M4A, WAV…):
+  - La melodía se extrae en el dispositivo, con el mismo detector de pitch, en un Web Worker.
+  - Incluye corrección de afinación global, segmentación en notas y frases, y tonalidad estimada.
+  - El audio no se sube, no se guarda y no se reproduce. Antes de analizar se confirma el uso personal y educativo. Las canciones importadas se pueden borrar.
+- Documentación: ADR-010, investigación de fuentes de melodía, plan de la fase 8a y ADR-008/009 actualizados.
+- 42 tests nuevos (canciones, perfil y transcripción) y 3 E2E.
+
+### Cambiado
+- Los ejercicios y la medición de "Mi voz" alimentan el perfil vocal.
+- La guía sonora respeta los silencios entre notas. La línea de tiempo muestra sílabas. El ejecutor de ejercicios admite una tónica fija y su propio catálogo, para los ejercicios generados.
+
 ### Añadido — Fase 4: profesor virtual
 - **"Tu profe"** en el resultado de cada ejercicio: titular, qué se oyó, consejos para probar ("Prueba esto:") y hasta dos observaciones secundarias.
 - **Clasificación de errores** (`core/teacher/diagnose.ts`), con prioridad: no se oyó, otra octava, no sigue la melodía, faltan notas, notas lejos, sirena (dirección, recorrido y cortes), salto corto o largo, algo bajo o alto, cae al final, inestable, casi, superado o excelente, y vibrato (informativo).

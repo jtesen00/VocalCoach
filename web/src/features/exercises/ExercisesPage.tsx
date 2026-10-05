@@ -88,10 +88,15 @@ interface RunnerProps {
   updateSettings: (patch: Partial<Settings>) => void;
   onSelect: (exerciseId: string) => void;
   onBack: () => void;
+  /** Tónica exacta (ejercicios generados desde una canción); si no, se adapta al rango. */
+  fixedRoot?: number;
+  /** Catálogo para el "siguiente paso" del profesor (por defecto, los ejercicios generales). */
+  catalog?: readonly ExerciseDef[];
+  backLabel?: string;
 }
 
-function ExerciseRunner({ def, settings, updateSettings, onSelect, onBack }: RunnerProps) {
-  const [root, setRoot] = useState(() => rootForRange(def, settings.range));
+export function ExerciseRunner({ def, settings, updateSettings, onSelect, onBack, fixedRoot, catalog = EXERCISES, backLabel = '← Todos los ejercicios' }: RunnerProps) {
+  const [root, setRoot] = useState(() => fixedRoot ?? rootForRange(def, settings.range));
   const plan = useMemo(() => buildPlan(def, root), [def, root]);
   const { state, start, cancel, framesRef, timingRef } = useExerciseRun(plan, settings);
   const running = state.phase === 'listening' || state.phase === 'countdown' || state.phase === 'singing';
@@ -103,15 +108,15 @@ function ExerciseRunner({ def, settings, updateSettings, onSelect, onBack }: Run
         plan,
         evaluation: state.evaluation,
         history: state.previous,
-        catalog: EXERCISES,
+        catalog,
         octaveMode: settings.octaveMode,
         level: settings.level,
         detailed: tech,
       }),
-    [plan, state.evaluation, state.previous, settings.octaveMode, settings.level, tech],
+    [plan, state.evaluation, state.previous, settings.octaveMode, settings.level, tech, catalog],
   );
   const actions = {
-    titleOf: (id: string) => EXERCISES.find((x) => x.id === id)?.title ?? id,
+    titleOf: (id: string) => catalog.find((x) => x.id === id)?.title ?? id,
     onExercise: onSelect,
     onRelax: () => updateSettings({ level: 'beginner' }),
     onAllowOctave: () => updateSettings({ octaveMode: 'pitch-class' }),
@@ -119,7 +124,7 @@ function ExerciseRunner({ def, settings, updateSettings, onSelect, onBack }: Run
 
   return (
     <section className="runner" aria-label={def.title}>
-      <button className="link back" onClick={() => { cancel(); onBack(); }}>← Todos los ejercicios</button>
+      <button className="link back" onClick={() => { cancel(); onBack(); }}>{backLabel}</button>
       <p className="exercise-meta">{KIND_LABEL[def.kind]} · <Difficulty def={def} /></p>
       <h2>{def.title}</h2>
       <p>{def.instructions}</p>
@@ -162,7 +167,7 @@ function ExerciseRunner({ def, settings, updateSettings, onSelect, onBack }: Run
         ) : (
           <button className="primary" onClick={start}>{state.phase === 'result' ? 'Repetir' : '▶ Empezar'}</button>
         )}
-        {state.phase === 'result' && <button onClick={onBack}>Otro ejercicio</button>}
+        {state.phase === 'result' && <button onClick={onBack}>{backLabel.replace(/^← /, '')}</button>}
       </div>
 
       {state.phase === 'result' && state.evaluation && advice && (

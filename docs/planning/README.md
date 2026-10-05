@@ -7,5 +7,8 @@
 | [fase-02-motor-de-pitch.md](fase-02-motor-de-pitch.md) | Fase 2: prototipo del motor de pitch |
 | [fase-03-ejercicios.md](fase-03-ejercicios.md) | Fase 3: ejercicios (épicas, tareas y criterios de aceptación) |
 | [fase-04-profesor-virtual.md](fase-04-profesor-virtual.md) | Fase 4: profesor virtual (diagnóstico, consejos, demostraciones, siguiente paso, coach en vivo) |
+| [fase-08a-canciones.md](fase-08a-canciones.md) | Fase 8a (adelantada): entrenamiento por canción e importación desde audio |
+
+La investigación (fuentes de melodía, separación de voz, derechos) está en [`../research/`](../research/fuentes-de-melodia.md).
 
 Las decisiones de arquitectura están en [`../adr/`](../adr/README.md), el historial de cambios en [`../CHANGELOG.md`](../CHANGELOG.md) y el contexto para retomar el trabajo en [`../memory/`](../memory/README.md).

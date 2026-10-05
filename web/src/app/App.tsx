@@ -1,19 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { audioEngine } from '../audio/engine';
 import { ExercisesPage } from '../features/exercises/ExercisesPage';
 import { RangeCalibration } from '../features/range/RangeCalibration';
+import { SongsPage } from '../features/songs/SongsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { TunerPage } from '../features/tuner/TunerPage';
 import { useEngineSnapshot } from '../features/tuner/useEngine';
+import { recordCalibration } from '../core/profile/vocal-profile';
+import { profileStore } from '../shared/profile-store';
 import { useSettings } from '../shared/settings';
 
-type View = 'exercises' | 'tuner' | 'range' | 'settings';
+type View = 'exercises' | 'songs' | 'tuner' | 'range' | 'settings';
 
 export function App() {
   const [settings, updateSettings] = useSettings();
   const [view, setView] = useState<View>(settings.range ? 'exercises' : 'range');
   const snapshot = useEngineSnapshot();
   const running = snapshot.status === 'running';
+
+  // Quien midió su voz antes de existir el perfil vocal: se usa esa medición como punto de partida.
+  useEffect(() => {
+    if (settings.range && !profileStore.get().calibrated) profileStore.update((p) => recordCalibration(p, settings.range!));
+  }, [settings.range]);
 
   const start = async () => {
     await audioEngine.start();
@@ -29,6 +37,7 @@ export function App() {
             {(
               [
                 ['exercises', 'Practicar'],
+                ['songs', 'Canciones'],
                 ['tuner', 'Canta libre'],
                 ['range', 'Mi voz'],
                 ['settings', 'Ajustes'],
@@ -72,13 +81,18 @@ export function App() {
           <TunerPage settings={settings} updateSettings={updateSettings} onCalibrate={() => setView('range')} />
         ) : view === 'exercises' ? (
           <ExercisesPage settings={settings} updateSettings={updateSettings} onCalibrate={() => setView('range')} />
+        ) : view === 'songs' ? (
+          <SongsPage settings={settings} updateSettings={updateSettings} onMeasure={() => setView('range')} />
         ) : view === 'settings' ? (
           <SettingsPage settings={settings} updateSettings={updateSettings} onMeasureVoice={() => setView('range')} />
         ) : (
           <RangeCalibration
             range={settings.range}
             detailed={settings.showDetails}
-            onSave={(range) => updateSettings({ range })}
+            onSave={(range) => {
+              updateSettings({ range });
+              profileStore.update((p) => recordCalibration(p, range));
+            }}
             onDone={() => setView('exercises')}
           />
         )}

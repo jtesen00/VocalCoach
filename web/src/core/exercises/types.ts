@@ -37,6 +37,8 @@ export interface PlanSegment {
   fromMidi: number;
   /** Igual a fromMidi en notas; distinto en los tramos de sirena. */
   toMidi: number;
+  /** Texto bajo la nota (sílaba de la letra en las canciones). */
+  label?: string;
 }
 
 export interface ExercisePlan {

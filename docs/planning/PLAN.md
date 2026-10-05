@@ -48,9 +48,10 @@ Un MP3 por sí solo **no** contiene la melodía de la voz como dato: es una mezc
 
 | Nivel | Qué carga el usuario | Cómo se obtiene la melodía | Dónde se procesa | Cuándo |
 |---|---|---|---|---|
-| **A. Canción + melodía** | Audio (MP3/M4A/WAV) + archivo de melodía: **UltraStar `.txt`** (formato karaoke estándar: notas, tiempos y letra), **MIDI `.mid`** o, más adelante, MusicXML | Se lee del archivo | **100 % en el dispositivo**, sin internet | Fase 8a |
-| **B. Solo audio, modo libre** | Solo audio | No hay melodía: se muestra la trayectoria del usuario sobre la música, sin puntuación | Dispositivo | Fase 8a |
-| **C. Solo audio, melodía automática** | Solo audio | **Separación de la voz** (modelo tipo Demucs) + detección de pitch sobre la voz separada → melodía objetivo editable; la letra puede alinearse por reconocimiento de voz | **Servidor (GPU)**, opcional y con consentimiento; se puede evaluar en el navegador con WebGPU más adelante | Fase 8b |
+| **A. Canción + melodía** | Audio (MP3/M4A/WAV) + archivo de melodía: **UltraStar `.txt`** (formato karaoke estándar: notas, tiempos y letra), **MIDI `.mid`** o, más adelante, MusicXML | Se lee del archivo | **100 % en el dispositivo**, sin internet | Fase 8b |
+| **B. Solo audio, modo libre** | Solo audio | No hay melodía: se muestra la trayectoria del usuario sobre la música, sin puntuación | Dispositivo | Fase 8b |
+| **C. Solo audio, melodía automática (local)** | Solo audio | Pitch tracking con el motor de la app → notas → frases → tonalidad. Muy buena con voz sola; aproximada con la mezcla completa | **Dispositivo**, sin subir nada | ✅ Adelantada ([investigación](../research/fuentes-de-melodia.md)) |
+| **C+. Con separación de voz** | Solo audio | **Separación de la voz** (modelo tipo Demucs) + detección de pitch sobre la voz separada → melodía editable; la letra puede alinearse por reconocimiento de voz | **Servidor (GPU)** opcional y con consentimiento, o navegador con WebGPU | Fase 8c |
 
 Reglas del modo karaoke:
 
@@ -291,7 +292,7 @@ Medición de latencia: **prueba de bucle** (el altavoz emite un pulso con tono c
 │  ├─ bench/                         # benchmark Node con el mismo código que el worklet
 │  └─ e2e/                           # Playwright con micrófono falso (WAV sintético)
 ├─ api/                              # ASP.NET Core — Fase 6 (estructura en ADR-004)
-├─ ai/                               # servicio Python — Fases 8b/9
+├─ ai/                               # servicio Python — Fases 8c/9
 └─ docs/  (planning/, memory/, adr/, benchmarks/, CHANGELOG.md)
 ```
 
@@ -308,8 +309,9 @@ Medición de latencia: **prueba de bucle** (el altavoz emite un pulso con tono c
 | 5. Progreso local | IndexedDB (Dexie), learning path, rachas, estadísticas | 2 semanas | |
 | 7. PWA | vite-plugin-pwa, shell offline, instalación, `storage.persist()` | 1 semana | *Se adelanta antes del backend: es barato y el producto ya es 100 % local* |
 | 6. Backend | API .NET, Postgres, auth, sync de intentos | 3–4 semanas | |
-| 8a. Canciones / karaoke local | Modelo de canción, importación audio + UltraStar/MIDI, modo libre, timeline, calibración de latencia, scoring por frase; catálogo propio/dominio público | 4–5 semanas | Puntuación estable entre repeticiones del mismo intento |
-| 8b. Melodía automática | Separación de voz + extracción de melodía como trabajo en servidor (opcional) | 3–4 semanas | Melodía extraída utilizable sin edición en ≥ 70 % de canciones de prueba |
+| 8a. Entrenamiento por canción (**adelantada**) | Modelo de canción, perfil vocal dinámico, tono recomendado, dificultad personal, práctica por frases, entrenamiento generado, importación local desde audio ([detalle](fase-08a-canciones.md), ADR-010) | **Implementado** | El bucle elegir → medir → tono → cantar → frase débil → entrenar → volver a cantar → mejora funciona con alumnos reales |
+| 8b. Importar canción + melodía | UltraStar/MIDI/MusicXML, modo libre, calibración de latencia | 2–3 semanas | Puntuación estable entre repeticiones del mismo intento |
+| 8c. Separación de voz | Separación de voz + extracción de melodía con la mezcla completa (servidor o WebGPU, opcional) | 3–4 semanas | Melodía extraída utilizable sin edición en ≥ 70 % de canciones de prueba |
 | 9. IA | Ver §7 | Investigación separada | |
 
 **Sync (Fase 6) sin complicarse:** los intentos son **inmutables y append-only** con UUID generado en el cliente → `POST` idempotente, sin resolución de conflictos. Solo ajustes/perfil usan last-write-wins.
@@ -322,7 +324,7 @@ Medición de latencia: **prueba de bucle** (el altavoz emite un pulso con tono c
 |---|---|---|
 | Fases 2–5, 7 | Hosting estático con HTTPS (Cloudflare Pages / Netlify / similar) | ~0 € |
 | Fase 6 | 1 contenedor .NET + Postgres gestionado + backups | 20–60 € |
-| Fases 8b y 9 | + almacenamiento de objetos (R2/S3) + GPU serverless por uso | variable, con cuota por usuario |
+| Fases 8c y 9 | + almacenamiento de objetos (R2/S3) + GPU serverless por uso | variable, con cuota por usuario |
 
 Sin Kubernetes, sin microservicios, sin Redis/Kafka, sin SignalR. El único servicio adicional justificado es el de IA, por el runtime (Python/GPU).
 
@@ -343,4 +345,4 @@ Sin Kubernetes, sin microservicios, sin Redis/Kafka, sin SignalR. El único serv
 1. **Medir el prototipo en dispositivos reales** (desktop Chrome/Safari, Android Chrome, iPhone Safari) con la checklist de [`docs/benchmarks/`](../benchmarks/README.md).
 2. Grabar el primer set de voces reales (con consentimiento) y pasar `pnpm bench -- voz.wav ref.csv`.
 3. Validar la Fase 3 con 30 intentos reales evaluados también por un profesor ([fase-03-ejercicios.md](fase-03-ejercicios.md)).
-4. Fase 4 (profesor virtual) implementada ([fase-04-profesor-virtual.md](fase-04-profesor-virtual.md)). Siguiente: Fase 5 (progreso local). Estado actualizado en [ROADMAP.md](ROADMAP.md).
+4. Fase 4 (profesor virtual) y Fase 8a (entrenamiento por canción, adelantada por ser el diferenciador del producto) implementadas. Siguiente: validar el bucle de canciones con alumnos y la Fase 5 (progreso en IndexedDB). Estado en [ROADMAP.md](ROADMAP.md).

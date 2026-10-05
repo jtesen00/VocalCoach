@@ -93,6 +93,15 @@ export function ExerciseTimeline({ plan, phase, framesRef, timingRef, tolerance,
         g.moveTo(x0 + 1, yOf(s.fromMidi));
         g.lineTo(x1 - 1, yOf(s.toMidi));
         g.stroke();
+        // Letra: cada sílaba bajo su nota.
+        if (s.label) {
+          g.fillStyle = color('--ink');
+          g.textBaseline = 'alphabetic';
+          g.font = '12px system-ui, sans-serif';
+          g.fillText(s.label, x0 + 2, Math.min(h - 4, yOf(s.fromMidi - band) + 14));
+          g.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+          g.textBaseline = 'middle';
+        }
       }
 
       const timing = timingRef.current;
