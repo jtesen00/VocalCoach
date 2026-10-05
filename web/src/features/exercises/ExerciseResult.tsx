@@ -1,30 +1,26 @@
-import { noteName } from '../../core/music/notes';
-import type { ExerciseEvaluation, NoteStatus } from '../../core/exercises/evaluate';
-import type { FeedbackMessage } from '../../core/exercises/feedback';
-
-const STATUS: Record<NoteStatus, { label: string; icon: string }> = {
-  perfect: { label: 'Perfecto', icon: '●' },
-  close: { label: 'Cerca', icon: '◐' },
-  too_high: { label: 'Alto', icon: '▼' },
-  too_low: { label: 'Bajo', icon: '▲' },
-  unstable: { label: 'Inestable', icon: '≈' },
-  no_voice: { label: 'Sin voz', icon: '○' },
-};
+import type { ExerciseEvaluation } from '../../core/exercises/evaluate';
+import { basicFeedback } from '../../core/exercises/feedback';
+import { displayNote, NOTE_RESULT, stars } from '../../shared/labels';
 
 const cents = (c: number | null) => (c === null ? '—' : `${c >= 0 ? '+' : '−'}${Math.abs(Math.round(c))} c`);
 const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)} %`);
 
-export function ExerciseResult({ evaluation: e, feedback }: { evaluation: ExerciseEvaluation; feedback: FeedbackMessage[] }) {
+export function ExerciseResult({ evaluation: e, detailed }: { evaluation: ExerciseEvaluation; detailed: boolean }) {
+  const feedback = basicFeedback(e, 3, { detailed });
+  const n = stars(e.score, e.passed);
   return (
     <div className="result" aria-live="polite">
       <div className="result-head">
-        <strong className="result-score">{e.score}</strong>
+        <span className="stars" role="img" aria-label={`${n} de 3 estrellas`}>
+          {[0, 1, 2].map((i) => <span key={i} className={i < n ? 'on' : 'off'}>★</span>)}
+        </span>
         <div>
-          <p className={`result-verdict ${e.passed ? 'pass' : 'fail'}`}>{e.passed ? '✓ Superado' : '✗ No superado'}</p>
+          <p className={`result-verdict ${e.passed ? 'pass' : 'fail'}`}>{e.passed ? '¡Superado!' : 'Casi… inténtalo otra vez'}</p>
           <p className="hint">
             {e.accuracy !== null
-              ? `Precisión ${pct(e.accuracy)} (mínimo 80 %, sin contar los primeros 250 ms de cada nota)`
-              : 'Sirena: se evalúa el recorrido, la dirección y la continuidad'}
+              ? `Afinado el ${pct(e.accuracy)} del tiempo (para superarlo, 80 %)`
+              : `Recorriste el ${pct(e.siren!.coverage)} del camino${e.siren!.breaks ? ` · se cortó ${e.siren!.breaks} ${e.siren!.breaks === 1 ? 'vez' : 'veces'}` : ' sin cortes'}`}
+            {detailed && ` · puntuación ${e.score}/100`}
           </p>
         </div>
       </div>
@@ -37,31 +33,41 @@ export function ExerciseResult({ evaluation: e, feedback }: { evaluation: Exerci
         </ul>
       )}
 
-      {e.notes.length > 0 && (
+      {e.notes.length > 1 && !detailed && (
+        <ol className="note-chips" aria-label="Resultado de cada nota">
+          {e.notes.map((note) => (
+            <li key={note.index} className={`status-${note.status}`}>
+              <span aria-hidden="true">{NOTE_RESULT[note.status].icon}</span> {displayNote(note.targetMidi, false)}: {NOTE_RESULT[note.status].label}
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {detailed && e.notes.length > 0 && (
         <table className="notes-table">
           <thead>
             <tr><th>#</th><th>Nota</th><th>Estado</th><th>Desviación</th><th>Precisión</th><th>Estabilidad</th></tr>
           </thead>
           <tbody>
-            {e.notes.map((n) => (
-              <tr key={n.index} className={`status-${n.status}`}>
-                <td>{n.index + 1}</td>
-                <td>{noteName(n.targetMidi)}</td>
-                <td><span aria-hidden="true">{STATUS[n.status].icon} </span>{STATUS[n.status].label}{n.vibrato ? ' · vibrato' : ''}</td>
-                <td>{cents(n.medianCents)}</td>
-                <td>{pct(n.accuracy)}</td>
-                <td>{pct(n.stability)}</td>
+            {e.notes.map((note) => (
+              <tr key={note.index} className={`status-${note.status}`}>
+                <td>{note.index + 1}</td>
+                <td>{displayNote(note.targetMidi, true)}</td>
+                <td><span aria-hidden="true">{NOTE_RESULT[note.status].icon} </span>{NOTE_RESULT[note.status].label}{note.vibrato ? ' · vibrato' : ''}</td>
+                <td>{cents(note.medianCents)}</td>
+                <td>{pct(note.accuracy)}</td>
+                <td>{pct(note.stability)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
 
-      {e.interval && (
+      {detailed && e.interval && (
         <p>Intervalo: objetivo {Math.round(e.interval.targetCents)} c · cantado {e.interval.sungCents === null ? '—' : `${Math.round(e.interval.sungCents)} c`} ({cents(e.interval.errorCents)})</p>
       )}
 
-      {e.siren && (
+      {detailed && e.siren && (
         <dl className="siren-stats">
           <dt>Recorrido cubierto</dt><dd>{pct(e.siren.coverage)}</dd>
           <dt>Dirección correcta</dt><dd>{pct(e.siren.direction)}</dd>
@@ -70,7 +76,7 @@ export function ExerciseResult({ evaluation: e, feedback }: { evaluation: Exerci
           <dd>
             {e.siren.reachedLowMidi === null
               ? '—'
-              : `${noteName(e.siren.reachedLowMidi - e.siren.octaveShift)} – ${noteName(e.siren.reachedHighMidi! - e.siren.octaveShift)}`}
+              : `${displayNote(e.siren.reachedLowMidi - e.siren.octaveShift, true)} – ${displayNote(e.siren.reachedHighMidi! - e.siren.octaveShift, true)}`}
           </dd>
         </dl>
       )}

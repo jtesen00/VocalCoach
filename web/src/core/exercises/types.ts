@@ -9,6 +9,8 @@ export interface NoteTarget {
 interface BaseExercise {
   id: string;
   title: string;
+  /** Una línea en lenguaje cotidiano para la lista. */
+  summary: string;
   instructions: string;
   level: SkillLevel;
 }

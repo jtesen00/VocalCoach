@@ -1,56 +1,68 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-test('micrófono → calibración de rango → afinador detecta C4 en tiempo real', async ({ page }) => {
+// El micrófono falso canta siempre C4 +5 c (con 0,5 s de silencio cada 3 s).
+const status = (page: Page) => page.locator('.status-big strong');
+
+async function start(page: Page, settings?: object) {
+  if (settings) await page.addInitScript((s) => localStorage.setItem('vocalcoach.settings.v1', JSON.stringify(s)), settings);
   await page.goto('/');
   await page.getByRole('button', { name: 'Activar micrófono' }).click();
   await expect(page.getByText('Micrófono activo')).toBeVisible();
+}
 
-  // Sin rango guardado se empieza por la calibración. El micro falso canta siempre C4.
-  await expect(page.getByRole('heading', { name: 'Nota más grave' })).toBeVisible();
+test('primera vez: medir la voz → practicar → canta libre en lenguaje sencillo', async ({ page }) => {
+  await start(page);
+  await expect(page.getByRole('heading', { name: 'Tu nota más grave' })).toBeVisible();
   await page.getByRole('button', { name: 'Empezar' }).click();
-  await expect(page.getByRole('heading', { name: 'Nota más aguda' })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { name: 'Tu nota más aguda' })).toBeVisible({ timeout: 10_000 });
   await page.getByRole('button', { name: 'Empezar' }).click();
-  await expect(page.getByText('C4 – C4')).toBeVisible({ timeout: 10_000 });
-  await page.getByRole('button', { name: 'Ir al afinador' }).click();
+  await expect(page.getByRole('heading', { name: '¡Listo! Ya conocemos tu voz' })).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: 'Empezar a practicar' }).click();
+  await expect(page.getByRole('heading', { name: 'Practicar' })).toBeVisible();
 
-  // Objetivo = centro del rango = C4; el afinador debe mostrar C4 y "Perfecto".
-  await expect(page.getByRole('group', { name: 'Nota objetivo' }).locator('output')).toHaveText('C4');
-  await expect(page.locator('.readout .note')).toHaveText('C4', { timeout: 5_000 });
-  await expect(page.locator('.status strong')).toHaveText('Perfecto');
-  await expect(page.locator('.readout .cents')).toHaveText(/^\+[3-7] c$/);
-
-  // Precisión del intento y diagnóstico de captura sin procesado del navegador.
+  await page.getByRole('button', { name: 'Canta libre' }).click();
+  await expect(page.getByRole('group', { name: 'Nota a cantar' }).locator('output')).toHaveText('Do');
+  await expect(status(page)).toHaveText('¡Afinado!', { timeout: 5_000 });
+  await expect(page.locator('.singing-now')).toHaveText('Estás cantando: Do');
   await expect(page.locator('.attempt strong')).toHaveText(/^(9\d|100)%$/, { timeout: 5_000 });
-  await page.getByText('Diagnóstico').click();
-  await expect(page.locator('dt:has-text("Supresión de ruido") + dd')).toHaveText('desactivado');
+  // Sin jerga por defecto: ni cents, ni Hz, ni diagnóstico.
+  await expect(page.locator('.readout-detail')).toHaveCount(0);
+  await expect(page.getByText('Diagnóstico')).toHaveCount(0);
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
-test('modo octava exacta: C4 con objetivo C3 se marca como demasiado alto', async ({ page }) => {
-  await page.addInitScript(() =>
-    localStorage.setItem('vocalcoach.settings.v1', JSON.stringify({ range: { lowMidi: 43, highMidi: 53 }, octaveMode: 'exact' })),
-  );
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Activar micrófono' }).click();
-  await expect(page.getByRole('group', { name: 'Nota objetivo' }).locator('output')).toHaveText('C3');
-  await expect(page.locator('.status strong')).toHaveText('Demasiado alto', { timeout: 5_000 });
-
-  await page.getByLabel('Octava').selectOption('pitch-class');
-  await expect(page.locator('.status strong')).toHaveText('Perfecto');
+test('detalles técnicos opcionales: nota con octava, cents y diagnóstico', async ({ page }) => {
+  await start(page, { range: { lowMidi: 55, highMidi: 65 } });
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.getByLabel('Mostrar detalles técnicos').check();
+  await page.getByRole('button', { name: 'Canta libre' }).click();
+  await expect(page.getByRole('group', { name: 'Nota a cantar' }).locator('output')).toHaveText('C4');
+  await expect(page.locator('.readout-detail .cents')).toHaveText(/^\+[3-7] c$/, { timeout: 5_000 });
+  await page.getByText('Diagnóstico').click();
+  await expect(page.locator('dt:has-text("Supresión de ruido") + dd')).toHaveText('desactivado');
 });
 
-test('llamada y respuesta: mientras suena la referencia no se analiza el micro', async ({ page }) => {
-  await page.addInitScript(() =>
-    localStorage.setItem('vocalcoach.settings.v1', JSON.stringify({ range: { lowMidi: 55, highMidi: 65 } })),
-  );
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Activar micrófono' }).click();
-  await expect(page.locator('.status strong')).toHaveText('Perfecto', { timeout: 5_000 });
+test('octava exacta frente a "vale más grave o más agudo"', async ({ page }) => {
+  await start(page, { range: { lowMidi: 43, highMidi: 53 }, octaveMode: 'exact' });
+  await page.getByRole('button', { name: 'Canta libre' }).click();
+  await expect(page.getByRole('group', { name: 'Nota a cantar' }).locator('output')).toHaveText('Do');
+  // Objetivo C3, el micro canta C4: una octava por encima.
+  await expect(status(page)).toHaveText('Baja bastante', { timeout: 5_000 });
 
-  await page.getByRole('button', { name: 'Escuchar y cantar' }).click();
-  await expect(page.getByText('Escucha la nota C4…')).toBeVisible();
-  await expect(page.locator('.status strong')).toHaveText('Escucha la referencia');
-  await expect(page.locator('.readout .note')).toHaveText('—');
-  await expect(page.getByText('¡Tu turno! Canta C4.')).toBeVisible({ timeout: 3_000 });
-  await expect(page.locator('.status strong')).toHaveText('Perfecto', { timeout: 5_000 });
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.getByLabel('Vale cantar la misma nota más grave o más aguda').check();
+  await page.getByRole('button', { name: 'Canta libre' }).click();
+  await expect(status(page)).toHaveText('¡Afinado!', { timeout: 5_000 });
+});
+
+test('llamada y respuesta: mientras suena la nota no se escucha el micro', async ({ page }) => {
+  await start(page, { range: { lowMidi: 55, highMidi: 65 } });
+  await page.getByRole('button', { name: 'Canta libre' }).click();
+  await expect(status(page)).toHaveText('¡Afinado!', { timeout: 5_000 });
+
+  await page.getByRole('button', { name: '▶ Escuchar y cantar' }).click();
+  await expect(page.getByText('Escucha la nota…')).toBeVisible();
+  await expect(status(page)).toHaveText('Escucha la nota');
+  await expect(page.getByText('¡Tu turno! Cántala igual.')).toBeVisible({ timeout: 3_000 });
+  await expect(status(page)).toHaveText('¡Afinado!', { timeout: 5_000 });
 });

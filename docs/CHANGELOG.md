@@ -4,6 +4,30 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Cambiado
+- **Interfaz sencilla por defecto:**
+  - Las notas se nombran en solfeo (Do, Re, Mi…), sin octavas, cents ni Hz.
+  - Mensajes en lenguaje cotidiano: "¡Afinado!", "Sube un poco", "Baja bastante".
+  - La aguja va de "más grave" a "más agudo".
+- **Navegación reorganizada:** Practicar (ejercicios, pantalla inicial), Canta libre (antes "Afinador"), Mi voz y Ajustes.
+- **Ejercicios con nombres y descripciones cotidianas:**
+  - "Mantén una nota", "Do-re-mi", "Salto pequeño", "Escalera de cinco notas", "Sirena hacia arriba"…
+  - La lista muestra un dibujo de la forma de la melodía, la dificultad (●○○) y la duración.
+  - La altura se ajusta con "− grave / agudo +".
+- **Resultado:** de 0 a 3 estrellas, "¡Superado!" o "Casi… inténtalo otra vez", "afinado el X % del tiempo" y una etiqueta sencilla por nota.
+- **Feedback sin jerga** ("quedó baja (bastante)"), con versión técnica opcional. Si dos mensajes dicen lo mismo, solo se muestra uno.
+- **"Mi voz":** el resultado se explica como "tu zona cómoda abarca N notas".
+- Texto de bienvenida y aviso de Bluetooth más claros.
+
+### Añadido
+- Pantalla **Ajustes**:
+  - Cuánto te corregimos: Relajado, Normal o Exigente.
+  - Si vale cantar en otra octava.
+  - Volver a medir la voz.
+  - **Mostrar detalles técnicos** (C4, cents, Hz, tabla por nota y diagnóstico), desactivado por defecto.
+- `solfegeName()` y opción `detailed` en el feedback.
+- Ramas `dev` (desarrollo) y `changes` (ajustes); `main` es la principal.
+
 ## [0.2.0] — 2026-10-05 · Fase 3: ejercicios
 
 ### Añadido

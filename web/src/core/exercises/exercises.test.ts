@@ -166,8 +166,10 @@ describe('secuencias e intervalos', () => {
     const e = evaluateExercise(doReMi, synth(4.5, sing([60, 62, 63.4, 62, 60])), opts);
     expect(e.notes[2].status).toBe('too_low');
     expect(e.accuracy).toBeCloseTo(0.8, 2);
-    const fb = basicFeedback(e);
-    expect(fb.find((m) => m.id === 'wrong-notes')!.text).toContain('nota 3 (E4)');
+    const simple = basicFeedback(e).find((m) => m.id === 'wrong-notes')!.text;
+    expect(simple).toContain('nota 3 (Mi) quedó baja (bastante)');
+    const detailed = basicFeedback(e, 3, { detailed: true }).find((m) => m.id === 'wrong-notes')!.text;
+    expect(detailed).toContain('nota 3 (E4) quedó baja (−60 c)');
   });
 
   it('dos notas equivocadas → no superado', () => {
@@ -186,6 +188,7 @@ describe('secuencias e intervalos', () => {
     const e = evaluateExercise(plan('scale-five'), synth(6.3, () => 61), opts);
     const ids = basicFeedback(e, 5).map((m) => m.id);
     expect(ids).toContain('not-following');
+    expect(ids).not.toContain('wrong-notes');
     expect(ids).not.toContain('consistently-low');
     expect(ids).not.toContain('consistently-high');
   });
@@ -196,6 +199,30 @@ describe('secuencias e intervalos', () => {
     expect(e.interval!.targetCents).toBe(700);
     expect(e.interval!.errorCents!).toBeCloseTo(-40, 6);
     expect(basicFeedback(e, 5).find((m) => m.id === 'interval')!.text).toContain('corto');
+  });
+});
+
+describe('lenguaje del feedback', () => {
+  const cases = [
+    evaluateExercise(plan('sustained-3s'), synth(3, () => 59.6), opts),
+    evaluateExercise(plan('steps-do-re-mi'), synth(4.5, () => 61), opts),
+    evaluateExercise(plan('interval-fifth'), synth(3, (t) => (t < 1.5 ? 60 : 66.6)), opts),
+    evaluateExercise(plan('sustained-3s'), synth(3, (t) => 60 + 0.4 * Math.sin(2 * Math.PI * 5.5 * t)), opts),
+    evaluateExercise(plan('siren-up'), synth(3, (t) => 60 + 5 * (t / 3)), opts),
+  ];
+
+  it('modo sencillo: sin cents, Hz ni nombres con octava', () => {
+    for (const e of cases) {
+      for (const m of basicFeedback(e, 10)) {
+        expect(m.text).not.toMatch(/\d+ c\b|Hz|[A-G]#?\d/);
+      }
+    }
+  });
+
+  it('modo detallado: incluye las cifras técnicas', () => {
+    const texts = cases.flatMap((e) => basicFeedback(e, 10, { detailed: true }).map((m) => m.text)).join(' ');
+    expect(texts).toMatch(/−40 c/);
+    expect(texts).toMatch(/Hz/);
   });
 });
 

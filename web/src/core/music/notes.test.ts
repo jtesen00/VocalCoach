@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freqToMidi, midiToFreq, nearestNote, noteName, parseNote } from './notes';
+import { freqToMidi, midiToFreq, nearestNote, noteName, parseNote, solfegeName } from './notes';
 
 describe('notes', () => {
   it('A4 = 440 Hz = MIDI 69', () => {
@@ -31,5 +31,11 @@ describe('notes', () => {
     expect(parseNote('Bb2')).toBe(46);
     expect(noteName(parseNote('C-1'))).toBe('C-1');
     expect(noteName(61)).toBe('C#4');
+  });
+
+  it('nombra en solfeo sin octava', () => {
+    expect([60, 62, 64, 65, 67, 69, 71, 72].map(solfegeName)).toEqual(['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Si', 'Do']);
+    expect(solfegeName(61)).toBe('Do#');
+    expect(solfegeName(47)).toBe('Si');
   });
 });

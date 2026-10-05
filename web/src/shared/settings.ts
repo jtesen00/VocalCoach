@@ -8,9 +8,11 @@ export interface Settings {
   level: SkillLevel;
   octaveMode: OctaveMode;
   detector: DetectorKind;
+  /** Muestra nombres de nota con octava, cents, Hz y diagnóstico. Por defecto, interfaz sencilla. */
+  showDetails: boolean;
 }
 
-const DEFAULTS: Settings = { range: null, level: 'beginner', octaveMode: 'pitch-class', detector: 'mpm' };
+const DEFAULTS: Settings = { range: null, level: 'beginner', octaveMode: 'pitch-class', detector: 'mpm', showDetails: false };
 const KEY = 'vocalcoach.settings.v1';
 
 function load(): Settings {

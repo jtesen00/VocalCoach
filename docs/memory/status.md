@@ -1,11 +1,16 @@
 # Estado actual
 
-_Última actualización: 2026-10-05 · versión 0.2.0_
+_Última actualización: 2026-10-05 · versión 0.2.0 + interfaz sencilla (sin publicar)_
+
+## Ramas
+- `main`: tiene la Fase 2 (PR #1 fusionado). **La Fase 3 no llegó a `main`**: se fusionó antes del último push.
+- `dev`: Fase 3 + reorganización de `docs/` + interfaz sencilla. Pendiente de PR a `main`.
+- `changes`: creada desde `main`, sin cambios.
 
 ## Hecho
-- Fase 2 (motor de pitch) y Fase 3 (ejercicios) implementadas y probadas con señales sintéticas y E2E en Chromium.
-- 91 tests unitarios, 6 E2E y CI en verde (`.github/workflows/web.yml`).
-- PR abierto: https://github.com/jtesen00/VocalCoach/pull/1 (rama `claude/quirky-noether-3parij`).
+- Fase 2 (motor de pitch) y Fase 3 (ejercicios), probadas con señales sintéticas y E2E en Chromium.
+- Interfaz sencilla por defecto, con detalles técnicos opcionales en Ajustes.
+- 94 tests unitarios, 8 E2E y CI.
 
 ## Siguiente
 1. Medir en dispositivos reales (checklist en `docs/benchmarks/README.md`).

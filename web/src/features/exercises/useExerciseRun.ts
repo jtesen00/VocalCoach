@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { audioEngine } from '../../audio/engine';
 import type { GuideEvent } from '../../audio/guide';
 import { evaluateExercise, type ExerciseEvaluation } from '../../core/exercises/evaluate';
-import { basicFeedback, type FeedbackMessage } from '../../core/exercises/feedback';
 import type { ExercisePlan } from '../../core/exercises/types';
 import type { PitchFrame } from '../../core/pitch/types';
 import { TOLERANCE_BY_LEVEL } from '../../core/scoring/pitch-scoring';
@@ -23,7 +22,6 @@ export interface RunState {
   phase: RunPhase;
   beat: number | null;
   evaluation: ExerciseEvaluation | null;
-  feedback: FeedbackMessage[];
 }
 
 const BEATS = 3;
@@ -60,7 +58,7 @@ function waitUntil(t: number, isCancelled: () => boolean): Promise<boolean> {
  * Los frames se acumulan en un ref (no en estado de React) y se comparten con el canvas.
  */
 export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
-  const [state, setState] = useState<RunState>({ phase: 'ready', beat: null, evaluation: null, feedback: [] });
+  const [state, setState] = useState<RunState>({ phase: 'ready', beat: null, evaluation: null});
   const framesRef = useRef<PitchFrame[]>([]);
   const timingRef = useRef<RunTiming>({ guideStartT: 0, guideDurationS: 1, singT: 0, latencyS: 0 });
   const runId = useRef(0);
@@ -69,14 +67,14 @@ export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
   useEffect(() => {
     runId.current++;
     framesRef.current = [];
-    setState({ phase: 'ready', beat: null, evaluation: null, feedback: [] });
+    setState({ phase: 'ready', beat: null, evaluation: null});
   }, [plan]);
 
   const start = useCallback(async () => {
     const id = ++runId.current;
     const cancelled = () => runId.current !== id;
     framesRef.current = [];
-    setState({ phase: 'listening', beat: null, evaluation: null, feedback: [] });
+    setState({ phase: 'listening', beat: null, evaluation: null});
 
     const events = guideEvents(plan);
     const guide = audioEngine.playGuide(events);
@@ -111,12 +109,12 @@ export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
       startT: singT,
       latencyS: timingRef.current.latencyS,
     });
-    setState({ phase: 'result', beat: null, evaluation, feedback: basicFeedback(evaluation) });
+    setState({ phase: 'result', beat: null, evaluation });
   }, [plan, settings.level, settings.octaveMode]);
 
   const cancel = useCallback(() => {
     runId.current++;
-    setState({ phase: 'ready', beat: null, evaluation: null, feedback: [] });
+    setState({ phase: 'ready', beat: null, evaluation: null});
   }, []);
 
   return { state, start, cancel, framesRef, timingRef };

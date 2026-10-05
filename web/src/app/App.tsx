@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { audioEngine } from '../audio/engine';
 import { ExercisesPage } from '../features/exercises/ExercisesPage';
 import { RangeCalibration } from '../features/range/RangeCalibration';
+import { SettingsPage } from '../features/settings/SettingsPage';
 import { TunerPage } from '../features/tuner/TunerPage';
 import { useEngineSnapshot } from '../features/tuner/useEngine';
 import { useSettings } from '../shared/settings';
 
-type View = 'tuner' | 'exercises' | 'range';
+type View = 'exercises' | 'tuner' | 'range' | 'settings';
 
 export function App() {
   const [settings, updateSettings] = useSettings();
-  const [view, setView] = useState<View>(settings.range ? 'tuner' : 'range');
+  const [view, setView] = useState<View>(settings.range ? 'exercises' : 'range');
   const snapshot = useEngineSnapshot();
   const running = snapshot.status === 'running';
 
@@ -25,9 +26,16 @@ export function App() {
         <h1>Vocal Coach</h1>
         {running && (
           <nav aria-label="Secciones">
-            <button aria-current={view === 'tuner' ? 'page' : undefined} onClick={() => setView('tuner')}>Afinador</button>
-            <button aria-current={view === 'exercises' ? 'page' : undefined} onClick={() => setView('exercises')}>Ejercicios</button>
-            <button aria-current={view === 'range' ? 'page' : undefined} onClick={() => setView('range')}>Mi rango</button>
+            {(
+              [
+                ['exercises', 'Practicar'],
+                ['tuner', 'Canta libre'],
+                ['range', 'Mi voz'],
+                ['settings', 'Ajustes'],
+              ] as const
+            ).map(([id, label]) => (
+              <button key={id} aria-current={view === id ? 'page' : undefined} onClick={() => setView(id)}>{label}</button>
+            ))}
           </nav>
         )}
         <div className={`mic ${running ? 'on' : ''}`} role="status">
@@ -39,16 +47,17 @@ export function App() {
 
       {running && snapshot.diagnostics?.bluetooth.suspected && (
         <p className="notice warn" role="alert">
-          Parece que usas un micrófono Bluetooth ({snapshot.diagnostics.bluetooth.reason}). Los micrófonos Bluetooth reducen
-          la calidad y añaden 150–300 ms de retraso. Para practicar usa el micrófono del dispositivo o auriculares con cable.
+          Parece que usas auriculares o un micrófono Bluetooth. Con Bluetooth la voz llega con retraso y peor calidad, y las correcciones
+          pueden fallar. Para practicar usa el micrófono del móvil u ordenador, o auriculares con cable.
+          {settings.showDetails && ` (${snapshot.diagnostics.bluetooth.reason})`}
         </p>
       )}
 
       <main>
         {!running ? (
           <section className="welcome">
-            <h2>Canta y mira tu afinación al instante</h2>
-            <p>Vocal Coach escucha tu voz, detecta la nota que cantas y te dice si estás alto, bajo o en el centro.</p>
+            <h2>Aprende a cantar afinado</h2>
+            <p>Canta y verás al instante si tienes que subir o bajar. Con ejercicios cortos, a tu ritmo y adaptados a tu voz.</p>
             <ul>
               <li><strong>Privado:</strong> el audio se analiza en tu dispositivo y no se envía a ningún servidor.</li>
               <li><strong>Mejor sin Bluetooth:</strong> usa el micrófono del dispositivo o auriculares con cable.</li>
@@ -63,8 +72,15 @@ export function App() {
           <TunerPage settings={settings} updateSettings={updateSettings} onCalibrate={() => setView('range')} />
         ) : view === 'exercises' ? (
           <ExercisesPage settings={settings} onCalibrate={() => setView('range')} />
+        ) : view === 'settings' ? (
+          <SettingsPage settings={settings} updateSettings={updateSettings} onMeasureVoice={() => setView('range')} />
         ) : (
-          <RangeCalibration range={settings.range} onSave={(range) => updateSettings({ range })} onDone={() => setView('tuner')} />
+          <RangeCalibration
+            range={settings.range}
+            detailed={settings.showDetails}
+            onSave={(range) => updateSettings({ range })}
+            onDone={() => setView('exercises')}
+          />
         )}
       </main>
     </div>

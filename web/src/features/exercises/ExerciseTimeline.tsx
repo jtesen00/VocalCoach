@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { audioEngine } from '../../audio/engine';
-import { noteName } from '../../core/music/notes';
+import { displayNote } from '../../shared/labels';
 import { planMidiRange, targetAt } from '../../core/exercises/plan';
 import type { ExercisePlan } from '../../core/exercises/types';
 import { median } from '../../core/pitch/tracker';
@@ -15,6 +15,7 @@ interface Props {
   timingRef: RefObject<RunTiming>;
   tolerance: Tolerance;
   octaveMode: OctaveMode;
+  detailed: boolean;
 }
 
 const LABEL_W = 40;
@@ -24,10 +25,10 @@ const MARGIN_SEMITONES = 3;
  * Línea de tiempo del ejercicio en Canvas (requestAnimationFrame, fuera de React):
  * barras objetivo con su tolerancia, guía de la sirena, voz del usuario y cursor.
  */
-export function ExerciseTimeline({ plan, phase, framesRef, timingRef, tolerance, octaveMode }: Props) {
+export function ExerciseTimeline({ plan, phase, framesRef, timingRef, tolerance, octaveMode, detailed }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const live = useRef({ plan, phase, tolerance, octaveMode });
-  live.current = { plan, phase, tolerance, octaveMode };
+  const live = useRef({ plan, phase, tolerance, octaveMode, detailed });
+  live.current = { plan, phase, tolerance, octaveMode, detailed };
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -35,7 +36,7 @@ export function ExerciseTimeline({ plan, phase, framesRef, timingRef, tolerance,
     let raf = 0;
     const draw = () => {
       raf = requestAnimationFrame(draw);
-      const { plan: p, phase: ph, tolerance: tol, octaveMode: mode } = live.current;
+      const { plan: p, phase: ph, tolerance: tol, octaveMode: mode, detailed: tech } = live.current;
       const dpr = window.devicePixelRatio || 1;
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
@@ -68,9 +69,10 @@ export function ExerciseTimeline({ plan, phase, framesRef, timingRef, tolerance,
         g.moveTo(LABEL_W, y);
         g.lineTo(w, y);
         g.stroke();
-        if (targets.has(m) || m % 12 === 0) {
+        // Modo sencillo: solo las notas del ejercicio, en solfeo.
+        if (targets.has(m) || (tech && m % 12 === 0)) {
           g.fillStyle = targets.has(m) ? color('--ink') : color('--muted');
-          g.fillText(noteName(m), 4, y);
+          g.fillText(displayNote(m, tech), 4, y);
         }
       }
 
@@ -152,7 +154,7 @@ export function ExerciseTimeline({ plan, phase, framesRef, timingRef, tolerance,
       ref={canvasRef}
       className="timeline"
       role="img"
-      aria-label={`Línea de tiempo: notas objetivo ${plan.segments.map((s) => noteName(s.fromMidi)).join(', ')} y tu voz`}
+      aria-label={`Línea de tiempo: notas a cantar ${plan.segments.map((s) => displayNote(s.fromMidi, detailed)).join(', ')} y tu voz`}
     />
   );
 }

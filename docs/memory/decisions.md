@@ -2,6 +2,12 @@
 
 Formato: fecha · decisión · motivo · referencia. Lo más reciente arriba.
 
+## 2026-10-05 (tarde)
+- **Interfaz sencilla por defecto:** solfeo sin octava, sin cents ni Hz, mensajes de acción ("Sube un poco"). Lo técnico, detrás de "Mostrar detalles técnicos" en Ajustes. · Un usuario normal solo quiere aprender a cantar y mejorar.
+- **El nivel se presenta como exigencia de la corrección** (Relajado, Normal, Exigente), no como nivel del usuario.
+- **Flujo de ramas:** `main` = principal y estable; `dev` = desarrollo de funcionalidades; `changes` = ajustes y correcciones. Se trabaja en `dev` o `changes` y se integra en `main` con PR. · Petición del equipo.
+- **Commits y PRs sin firma de Claude:** sin `Co-Authored-By`, sin enlaces de sesión y con el autor del repositorio como autor de git. · Petición del equipo.
+
 ## 2026-10-05
 - **Ejercicios como datos** en `core/exercises/catalog.ts`, relativos a una tónica y transpuestos al rango del usuario. · Añadir ejercicios sin tocar la UI. · [fase-03](../planning/fase-03-ejercicios.md)
 - **Superación de un ejercicio:** accuracy global ≥ 80 % y ninguna nota sin voz. Una nota mal de cinco (80 %) supera justo el umbral. · Regla del punto 4. · `evaluate.ts`
