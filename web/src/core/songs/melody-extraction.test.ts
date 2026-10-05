@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { extractMelody } from './melody-extraction';
 import { makeMix, scoreExtraction, type MixOptions } from './test-mix';
 import { segmentNotes, trackPitch, transcribeAudio } from './transcribe';
+import { recognizeChords } from './chord-recognition';
 import type { PitchFrame } from '../pitch/types';
 
 const toFrames = (line: ReturnType<typeof extractMelody>): PitchFrame[] =>
@@ -52,5 +53,24 @@ describe('extracción de la melodía de una canción completa (voz + instrumento
   it('calidad de la extracción: buena en una mezcla estéreo con la voz clara', () => {
     const mix = makeMix({});
     expect(transcribeAudio(mix.left, mix.right, mix.sampleRate).quality).toMatchObject({ stereo: true, level: 'buena' });
+  });
+
+  it.each<[string, MixOptions, number]>([
+    ['estéreo', {}, 0.95],
+    ['mono', { stereo: false }, 0.95],
+    ['voz grave', { transpose: -12 }, 0.85],
+  ])('acordes del audio (%s): Lam–Fa–Do–Sol reconocidos', (_, options, min) => {
+    const mix = makeMix(options);
+    const rec = recognizeChords(mix.left, mix.right, mix.sampleRate, { tonic: 9, mode: 'menor' });
+    let ok = 0;
+    let n = 0;
+    for (let t = 0.1; t < mix.left.length / mix.sampleRate; t += 0.05) {
+      const truth = mix.chords.find((c) => t >= c.startS && t < c.endS)!;
+      if (Math.abs(t - truth.startS) < 0.25 || Math.abs(t - truth.endS) < 0.25) continue;
+      const r = rec.find((c) => t >= c.startS && t < c.endS);
+      n++;
+      if (r && r.chord.root === truth.root && r.chord.quality === truth.quality) ok++;
+    }
+    expect(ok / n).toBeGreaterThanOrEqual(min);
   });
 });

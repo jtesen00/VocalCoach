@@ -43,6 +43,8 @@ El usuario carga un MP3, M4A o WAV y, opcionalmente, el fragmento ("desde / hast
 - Antes de analizar, el usuario confirma el uso personal y educativo.
 - **Extracción polifónica** (estilo Melodia, ver [investigación](../research/fuentes-de-melodia.md)): 92–100 % de altura correcta en mezclas estéreo sintéticas. La primera versión, con el detector monofónico, acertaba el 0 % y se sustituyó tras probarla con un MP3 real.
 - Para entender lo extraído: ▶ en cada frase y "Escuchar toda la melodía", con opción de parar; la forma de cada frase, su minuto en la canción original, el número de notas y la **calidad de la extracción** con consejos.
+- **Frases tipo karaoke** (líneas de 4–9 s cortadas en las respiraciones) y **acordes reconocidos del audio**, visibles sobre la melodía y tocados en el acompañamiento.
+- **Sonido de la guía con cuerpo**: piano, voz «uuh», silbido, flauta o cuerdas, ligados y con reverberación; acompañamiento con acordes opcional.
 - Mejora siguiente: separación de voz con IA (fase 8c) para mezclas mono, densas o con coros.
 
 ## Pruebas

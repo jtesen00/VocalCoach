@@ -1,7 +1,8 @@
 import { analyzeSong, rangeWarnings } from '../../core/songs/analysis';
 import { songDifficulty } from '../../core/songs/difficulty';
 import { keyName, recommendKey } from '../../core/songs/key';
-import { guideEvents, type GuideEvent } from '../../core/exercises/guide';
+import { guideChords, guideEvents, type GuideEvent } from '../../core/exercises/guide';
+import type { TimedChord } from '../../core/music/chords';
 import { allPhrases, phrasePlan } from '../../core/songs/melody';
 import { describeIssue } from '../../core/songs/coach';
 import { weakestPhrase } from '../../core/songs/scoring';
@@ -50,14 +51,28 @@ export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onB
   const weak = weakId ? phrases.find((p) => p.phrase.id === weakId)! : null;
   const t = rec.best.transpose;
   const imported = song.license === 'user-provided';
-  /** Toda la melodía, con los silencios reales entre frases (máx. 1,5 s). */
-  const wholeMelody = (): GuideEvent[] => {
-    const out: GuideEvent[] = [];
+  const withChords = settings.accompaniment;
+  /** Una frase: melodía y (si está activado) sus acordes. */
+  const phraseSound = (p: (typeof phrases)[number]) => {
+    const plan = phrasePlan(p, transpose);
+    return { events: guideEvents(plan), chords: withChords ? guideChords(plan) : undefined };
+  };
+  /** Toda la melodía seguida, con una breve pausa entre frases. */
+  const wholeMelody = () => {
+    const events: GuideEvent[] = [];
+    const chords: TimedChord[] = [];
+    let t = 0;
     phrases.forEach((p, i) => {
-      if (i) out.push({ type: 'rest', durationS: 0.8 });
-      out.push(...guideEvents(phrasePlan(p, transpose)));
+      if (i) {
+        events.push({ type: 'rest', durationS: 0.8 });
+        t += 0.8;
+      }
+      const s = phraseSound(p);
+      s.chords?.forEach((c) => chords.push({ ...c, startS: c.startS + t, endS: c.endS + t }));
+      events.push(...s.events);
+      t += s.events.reduce((a, e) => a + e.durationS, 0);
     });
-    return out;
+    return { events, chords: withChords ? chords : undefined };
   };
   const QUALITY = {
     buena: 'La melodía se extrajo con claridad.',
@@ -167,7 +182,7 @@ export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onB
                     <MelodyShape plan={phrasePlan(p, transpose)} />
                     {imported ? `${p.phrase.lyrics} · ${p.phrase.notes.length} notas` : p.phrase.lyrics}
                   </span>
-                  <ListenButton className="small" events={() => guideEvents(phrasePlan(p, transpose))} label="▶" playingLabel="■" />
+                  <ListenButton className="small" events={() => phraseSound(p)} label="▶" playingLabel="■" />
                   <span className={`phrase-last ${r ? (r.last >= 80 ? 'pass' : r.last >= 60 ? 'fair' : 'fail') : ''}`}>
                     {r ? `${r.last} % ${ICON(r.last)}` : '—'}
                   </span>

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import type { InstrumentId } from '../audio/instruments';
 import type { DetectorKind } from '../core/pitch/types';
 import type { VocalRange } from '../core/range/vocal-range';
 import type { OctaveMode, SkillLevel } from '../core/scoring/pitch-scoring';
@@ -10,9 +11,21 @@ export interface Settings {
   detector: DetectorKind;
   /** Muestra nombres de nota con octava, cents, Hz y diagnóstico. Por defecto, interfaz sencilla. */
   showDetails: boolean;
+  /** Sonido de la guía y las demostraciones. */
+  instrument: InstrumentId;
+  /** Acompañamiento con acordes en las canciones. */
+  accompaniment: boolean;
 }
 
-const DEFAULTS: Settings = { range: null, level: 'beginner', octaveMode: 'pitch-class', detector: 'mpm', showDetails: false };
+const DEFAULTS: Settings = {
+  range: null,
+  level: 'beginner',
+  octaveMode: 'pitch-class',
+  detector: 'mpm',
+  showDetails: false,
+  instrument: 'piano',
+  accompaniment: true,
+};
 const KEY = 'vocalcoach.settings.v1';
 
 function load(): Settings {

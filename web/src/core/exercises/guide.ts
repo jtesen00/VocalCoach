@@ -1,3 +1,4 @@
+import type { TimedChord } from '../music/chords';
 import type { ExercisePlan } from './types';
 
 /** Evento de una guía o demostración sonora: nota fija, deslizamiento o silencio. Altura en MIDI (admite decimales). */
@@ -26,4 +27,9 @@ export function guideEvents(plan: ExercisePlan, tempo = 1): GuideEvent[] {
 
 export function guideDuration(events: readonly GuideEvent[]): number {
   return events.reduce((a, e) => a + e.durationS, 0);
+}
+
+/** Acordes del plan ajustados a un tempo (< 1 = más lentos), para tocarlos junto a la guía. */
+export function guideChords(plan: ExercisePlan, tempo = 1): TimedChord[] | undefined {
+  return plan.chords?.map((c) => ({ ...c, startS: c.startS / tempo, endS: c.endS / tempo }));
 }

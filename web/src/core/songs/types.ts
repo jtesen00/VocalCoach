@@ -1,3 +1,5 @@
+import type { PhraseChord } from '../music/chords';
+
 /**
  * Modelo de canción como datos musicales, independiente de cualquier grabación.
  * Solo se incluyen las entidades necesarias para el MVP (ver ADR-010).
@@ -17,6 +19,10 @@ export interface SongPhrase {
   /** Letra completa de la frase, para mostrarla. */
   lyrics: string;
   notes: MelodyNote[];
+  /** Acordes de la frase (en pulsos desde su inicio). */
+  chords?: PhraseChord[];
+  /** Canciones importadas: segundo de la canción original en que empieza la frase. */
+  originS?: number;
 }
 
 export interface SongSection {

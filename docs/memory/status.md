@@ -13,7 +13,8 @@ _Última actualización: 2026-10-05 · versión 0.2.0 + interfaz sencilla + Fase
 - Fase 4: profesor virtual (diagnóstico, consejos, demostraciones sonoras, siguiente paso y coach en vivo).
 - Fase 8a: canciones, perfil vocal dinámico, tono recomendado, dificultad personal, frases, entrenamiento generado e importación local desde MP3.
 - Importación de MP3 rehecha con extracción polifónica (0 % → 92–100 % en mezclas sintéticas estéreo).
-- 197 tests unitarios, 13 E2E y CI.
+- Sonido de la guía con instrumentos a elegir, acordes (catálogo y reconocidos del audio) y frases tipo karaoke.
+- 204 tests unitarios, 15 E2E y CI.
 
 ## Siguiente
 1. Medir en dispositivos reales (checklist en `docs/benchmarks/README.md`).

@@ -2,6 +2,12 @@
 
 Formato: fecha · decisión · motivo · referencia. Lo más reciente arriba.
 
+## 2026-10-05 (mediodía) · Sonido y karaoke
+- **Instrumentos sintetizados en el dispositivo** (Web Audio) en lugar de muestras: sin descargas, sin derechos de terceros y offline. Los sostenidos se tocan ligados (una voz por frase). · Feedback: la guía "no tenía cuerpo".
+- **Acordes:** escritos a mano en el catálogo y **reconocidos del audio** en las importaciones; se tocan y se muestran como en un karaoke.
+- **Líneas tipo karaoke por programación dinámica** (4–9 s, cortes en respiraciones), no por umbral de silencio fijo. · Feedback: las frases eran fragmentos.
+- **Validar el sonido con las herramientas de la app:** cada instrumento se renderiza (OfflineAudioContext) y se comprueban las notas con el detector y los acordes con el reconocedor.
+
 ## 2026-10-05 (mañana) · Importar MP3: extracción polifónica
 - **El detector monofónico no sirve para canciones completas** (0 % medido): la importación usa extracción de la melodía principal estilo Melodia (saliencia armónica + estéreo + contornos). · Feedback del equipo tras probar un MP3 real.
 - **Antes de ajustar, medir:** mezcla sintética reproducible con verdad conocida (`core/songs/test-mix.ts`) y métricas tipo MIREX; los umbrales se eligieron con esa medición y quedan fijados en tests.

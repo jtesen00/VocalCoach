@@ -1,4 +1,5 @@
 import type { NotesExercise, ExercisePlan, PlanSegment } from '../exercises/types';
+import { phraseChords, transposeChord, type PhraseChord } from '../music/chords';
 import type { MelodyNote, PhraseRef, Song, SongPhrase } from './types';
 
 /**
@@ -7,13 +8,18 @@ import type { MelodyNote, PhraseRef, Song, SongPhrase } from './types';
  *   (sinalefa: "dón-de_es-tás" son 3 notas);
  * - alturas MIDI y duraciones en pulsos, una por sílaba.
  */
-export function phrase(id: string, lyrics: string, midis: readonly number[], beats: readonly number[], shift = 0): SongPhrase {
+export function phrase(id: string, lyrics: string, midis: readonly number[], beats: readonly number[], shift = 0, chords?: string): SongPhrase {
   const syllables = lyrics.split(/[\s-]+/).filter(Boolean).map((s) => s.replace(/_/g, ' '));
   if (syllables.length !== midis.length || midis.length !== beats.length) {
     throw new Error(`Frase ${id}: ${syllables.length} sílabas, ${midis.length} notas y ${beats.length} duraciones`);
   }
   const notes: MelodyNote[] = midis.map((m, i) => ({ midi: m + shift, beats: beats[i], syllable: syllables[i] }));
-  return { id, lyrics: lyrics.replace(/-/g, '').replace(/_/g, ' '), notes };
+  const total = beats.reduce((a, b) => a + b, 0);
+  const pc: PhraseChord[] | undefined = chords ? phraseChords(chords, shift) : undefined;
+  if (pc && Math.abs(pc.reduce((a, c) => a + c.beats, 0) - total) > 1e-6) {
+    throw new Error(`Frase ${id}: los acordes duran ${pc.reduce((a, c) => a + c.beats, 0)} pulsos y la melodía ${total}`);
+  }
+  return { id, lyrics: lyrics.replace(/-/g, '').replace(/_/g, ' '), notes, chords: pc };
 }
 
 export function allPhrases(song: Song): PhraseRef[] {
@@ -54,5 +60,10 @@ export function phrasePlan(ref: PhraseRef, transpose = 0, tempo = 1): ExercisePl
     level: 'intermediate',
     notes: ref.phrase.notes.map((n) => ({ offset: n.midi - ref.phrase.notes[0].midi, durationMs: n.beats * spb * 1000 })),
   };
-  return { def, rootMidi: ref.phrase.notes[0].midi + transpose, segments, durationS: t };
+  const chords = ref.phrase.chords?.map((c) => ({
+    startS: c.startBeat * spb,
+    endS: (c.startBeat + c.beats) * spb,
+    chord: transposeChord(c.chord, transpose),
+  }));
+  return { def, rootMidi: ref.phrase.notes[0].midi + transpose, segments, durationS: t, chords };
 }

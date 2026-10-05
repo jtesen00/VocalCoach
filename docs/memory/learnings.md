@@ -20,3 +20,7 @@
 - **Los armónicos del bajo están centrados** como la voz (el 6.º de un Do2 es un Sol4); se distinguen porque decaen tras el ataque. El decaimiento se mide al **principio** del contorno, porque un contorno puede fundir la voz con la cola de un instrumento en la misma nota.
 - **El voicing de Melodia (μ − 0,2σ) está pensado para mezclas:** con voz sola descarta notas buenas; se usa un umbral relativo a los contornos más fuertes.
 - **`Math.max(...array)` con cientos de miles de elementos desborda la pila:** usar un bucle.
+- **Acordes relativos** (Fa/Lam, Do/Mim) comparten dos notas: el cromagrama del **bajo** los distingue. Los bajos llegan a 41 Hz: si la banda empieza en 55 Hz, solo se ve su 3.er armónico (otra nota).
+- **Redondear la clase de altura antes del módulo**: `round(x) % 12`, no `round(x % 12)` (que puede dar 12).
+- **Un extractor de voz descarta a propósito sonidos que decaen** (piano): no sirve para validar una demo de piano. Cada cosa se valida con su herramienta.
+- **`OfflineAudioContext` en Playwright** permite renderizar y verificar audio sintetizado en tests E2E.

@@ -3,7 +3,7 @@ import { midiToFreq } from '../music/notes';
 import { tone, VOICE_LIKE_HARMONICS, whiteNoise, withNoise } from '../pitch/signals';
 import { allPhrases } from './melody';
 import { EXTRACTION_SAMPLE_RATE } from './melody-extraction';
-import { estimateKey, notesToSong, trackPitch, transcribeAudio, tuningOffsetCents } from './transcribe';
+import { cleanNotes, estimateKey, karaokeLines, notesToSong, trackPitch, transcribeAudio, tuningOffsetCents } from './transcribe';
 
 const SR = EXTRACTION_SAMPLE_RATE;
 
@@ -57,19 +57,21 @@ describe('transcripción de la melodía (importar audio)', () => {
     expect(transcribe(whiteNoise(SR, 2, 0.1, 4))).toEqual([]);
   });
 
-  it('separa en frases por los silencios y genera una canción practicable', () => {
+  it('una respiración corta no parte la línea (estilo karaoke) y genera una canción practicable', () => {
     const song = notesToSong(transcribe(sing(MELODY)), { id: 'import-test', title: 'Prueba' });
     const phrases = allPhrases(song);
-    expect(phrases).toHaveLength(2);
-    expect(phrases.map((p) => p.phrase.notes.length)).toEqual([5, 3]);
-    expect(phrases[0].phrase.lyrics).toBe('0:00 – 0:02');
+    // 2,4 s + 0,6 s de respiración + 2 s: una sola línea de 8 notas, como en un karaoke.
+    expect(phrases).toHaveLength(1);
+    expect(phrases[0].phrase.notes).toHaveLength(8);
+    expect(phrases[0].phrase.lyrics).toBe('0:00 – 0:05');
+    expect(phrases[0].phrase.originS).toBeCloseTo(0.3, 1);
     expect(song.license).toBe('user-provided');
     expect(song.bpm).toBe(60);
   });
 
-  it('parte las frases demasiado largas por su mayor silencio', () => {
+  it('parte las líneas demasiado largas por su mayor silencio', () => {
     const notes = Array.from({ length: 12 }, (_, i) => ({ midi: 60 + (i % 3), startS: i * 1 + (i === 6 ? 0.25 : 0), endS: i * 1 + 0.8 }));
-    const song = notesToSong(notes, { id: 'x', title: 'x' }, { phraseGapS: 0.35, maxPhraseS: 8 });
+    const song = notesToSong(notes, { id: 'x', title: 'x' });
     expect(allPhrases(song).map((p) => p.phrase.notes.length)).toEqual([6, 6]);
   });
 
@@ -79,5 +81,53 @@ describe('transcripción de la melodía (importar audio)', () => {
     expect(estimateKey([n(60, 3), n(62), n(64, 2), n(65), n(67, 3), n(69), n(71), n(72, 2)])).toEqual({ tonic: 60, mode: 'mayor' });
     // La menor: insistiendo en La, Do y Mi.
     expect(estimateKey([n(57, 4), n(59), n(60, 2), n(62), n(64, 3), n(65), n(67), n(69, 3)])).toEqual({ tonic: 69, mode: 'menor' });
+  });
+
+  it('limpia la línea: funde notas cortísimas, quita saltos sueltos y liga los huecos breves', () => {
+    const n = (midi: number, a: number, b: number) => ({ midi, startS: a, endS: b });
+    const out = cleanNotes([n(60, 0, 0.5), n(61, 0.52, 0.6), n(62, 0.6, 1), n(80, 1.0, 1.15), n(64, 1.1, 1.8)]);
+    expect(out.map((x) => x.midi)).toEqual([60, 62, 64]);
+    expect(out[0].endS).toBeCloseTo(0.6, 6); // la nota de 80 ms se fundió con la vecina
+    expect(out[1].endS).toBeCloseTo(1.1, 6); // el hueco de 100 ms se cerró (legato)
+  });
+});
+
+describe('líneas tipo karaoke', () => {
+  /** Canción con respiraciones cortas (0,3 s) cada 2,5 s y una parte instrumental de 4 s. */
+  function song() {
+    const notes = [];
+    let t = 0;
+    for (let k = 0; k < 24; k++) {
+      notes.push({ midi: 60 + (k % 5), startS: t, endS: t + 0.4 });
+      t += (k + 1) % 6 === 0 ? 0.7 : 0.5; // cada 6 notas, una respiración algo más larga
+      if (k === 11) t += 4; // parte instrumental
+    }
+    return notes;
+  }
+
+  it('líneas de 4–9 s cortadas en las respiraciones, nunca en mitad de un legato', () => {
+    const { lines } = karaokeLines(song());
+    for (const l of lines) {
+      const d = l[l.length - 1].endS - l[0].startS;
+      expect(d).toBeGreaterThanOrEqual(2.5);
+      expect(d).toBeLessThanOrEqual(9);
+    }
+    expect(lines.length).toBeLessThanOrEqual(4);
+  });
+
+  it('la parte instrumental separa secciones', () => {
+    const s = notesToSong(song(), { id: 'x', title: 'x' });
+    expect(s.sections.length).toBe(2);
+  });
+
+  it('los acordes reconocidos se reparten entre las frases', () => {
+    const chords = [
+      { startS: 0, endS: 3, chord: { root: 0, quality: 'maj' as const } },
+      { startS: 3, endS: 30, chord: { root: 7, quality: 'maj' as const } },
+    ];
+    const s = notesToSong(song(), { id: 'x', title: 'x' }, { chords });
+    const first = allPhrases(s)[0].phrase;
+    expect(first.chords![0]).toMatchObject({ startBeat: 0, chord: { root: 0 } });
+    expect(first.chords!.some((c) => c.chord.root === 7)).toBe(true);
   });
 });

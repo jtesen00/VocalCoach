@@ -4,6 +4,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Mejorado — Sonido de la guía, acordes y frases tipo karaoke
+- **Instrumentos sintetizados a elegir** (Ajustes → Sonido de la guía): piano, voz «uuh», silbido, flauta y cuerdas.
+  - Los que sostienen el sonido tocan **ligado** (una voz por frase que se desliza de nota a nota), con vibrato natural.
+  - El piano tiene parciales con inarmonicidad de cuerda y ataque de martillo.
+  - Todos pasan por reverberación de sala. Se generan en el dispositivo, sin muestras grabadas.
+- **Acompañamiento con acordes** (activable): acordes de piano o colchón de cuerdas bajo la melodía, en las canciones.
+  - Catálogo: acordes escritos a mano en cada frase.
+  - Canciones importadas: **acordes reconocidos del propio audio** (`core/songs/chord-recognition.ts`: cromagrama + bajo + plantillas de 24 tríadas + Viterbi).
+- **Acordes visibles** sobre la línea de la melodía, como en un karaoke.
+- **Frases tipo karaoke en las canciones importadas:** líneas de unos 4–9 s elegidas con programación dinámica, cortando en las respiraciones más largas y nunca en mitad de un ligado. Las partes instrumentales largas separan secciones.
+- **Melodía más limpia:** se funden notas cortísimas espurias, se quitan saltos sueltos de octava y se cierran los huecos breves (legato).
+- Tests: reconocimiento de acordes (100 % en la mezcla estéreo de prueba), limpieza y segmentación tipo karaoke; E2E que renderiza cada instrumento y comprueba con la propia app que toca las notas y los acordes exactos.
+
 ### Corregido — Importar canciones desde MP3
 - **La extracción de la melodía no funcionaba con canciones reales** (voz + instrumentos): usaba el detector monofónico del micrófono, que acertaba el 0 % en una mezcla, así que apenas sonaba la guía y las frases no tenían sentido.
 - Nueva **extracción de la melodía principal de música polifónica** (`core/songs/melody-extraction.ts`, estilo Melodia):

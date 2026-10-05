@@ -59,8 +59,10 @@ test('importar un audio: se extrae la melodía y se puede practicar', async ({ p
   await analyze.click();
 
   await expect(page.getByRole('heading', { name: 'melodia prueba' })).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator('.phrase-list li')).toHaveCount(2);
-  await expect(page.locator('.phrase-list li').first()).toContainText('0:00 – 0:02');
+  // Dos fragmentos separados por una respiración corta: una sola línea, como en un karaoke.
+  await expect(page.locator('.phrase-list li')).toHaveCount(1);
+  await expect(page.locator('.phrase-list li').first()).toContainText('0:00 – 0:05');
+  await expect(page.locator('.phrase-list li').first()).toContainText('8 notas');
   await expect(page.getByText('Importada por ti')).toBeVisible();
 
   await page.getByRole('button', { name: '← Todas las canciones' }).click();
@@ -89,4 +91,23 @@ test('importar una canción completa (voz + instrumentos, estéreo): frases corr
   await page.getByRole('button', { name: '▶ Escuchar toda la melodía' }).click();
   await page.getByRole('button', { name: '■ Parar' }).click();
   await expect(page.getByRole('button', { name: '▶ Escuchar toda la melodía' })).toBeVisible();
+});
+
+test('sonido de la guía: elegir instrumento, probarlo y oír acordes sin errores de audio', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await openSongs(page);
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  for (const name of ['Voz «uuh»', 'Silbido', 'Flauta', 'Cuerdas', 'Piano']) {
+    await page.getByLabel(name, { exact: false }).check();
+    await page.waitForTimeout(300);
+  }
+  await page.getByRole('button', { name: '▶ Probar sonido' }).click();
+  await page.waitForTimeout(500);
+  await page.getByRole('button', { name: 'Canciones', exact: true }).click();
+  await page.getByRole('button', { name: 'Abrir Estrellita' }).click();
+  await page.getByRole('button', { name: '▶ Escuchar toda la melodía' }).click();
+  await page.waitForTimeout(800);
+  await page.getByRole('button', { name: '■ Parar' }).click();
+  expect(errors).toEqual([]);
 });

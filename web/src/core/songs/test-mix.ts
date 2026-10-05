@@ -30,6 +30,8 @@ export interface MixOptions {
 }
 
 export interface Mix {
+  /** Acordes reales (progresión de la mezcla). */
+  chords: { startS: number; endS: number; root: number; quality: 'maj' | 'min' }[];
   left: Float32Array;
   right: Float32Array;
   sampleRate: number;
@@ -129,7 +131,14 @@ export function makeMix(options: MixOptions = {}): Mix {
   }
 
   const truthAt = (time: number) => melody.find((m) => time >= m.startS && time < m.endS)?.midi ?? null;
-  return { left, right, sampleRate: sr, melody, truthAt };
+  const NAMES = [[9, 'min'], [5, 'maj'], [0, 'maj'], [7, 'maj']] as const; // Am F C G
+  const chords = Array.from({ length: Math.ceil(total / 2) }, (_, c) => ({
+    startS: c * 2,
+    endS: Math.min(total, c * 2 + 2),
+    root: NAMES[c % 4][0],
+    quality: NAMES[c % 4][1],
+  }));
+  return { left, right, sampleRate: sr, melody, truthAt, chords };
 }
 
 export interface ExtractionScore {

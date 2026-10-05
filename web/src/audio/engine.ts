@@ -3,7 +3,9 @@ import { PitchTracker } from '../core/pitch/tracker';
 import type { DetectorKind, PitchFrame } from '../core/pitch/types';
 import { checkBluetooth, type BluetoothCheck } from './devices';
 import type { PitchProcessorOptions, WorkletMessage } from './pitch-worklet';
-import { scheduleClick, scheduleGuide, type GuideEvent } from './guide';
+import { scheduleClick, type GuideEvent } from './guide';
+import { playChords, playMelody, type InstrumentId } from './instruments';
+import type { TimedChord } from '../core/music/chords';
 import workletUrl from './pitch-worklet.ts?worker&url';
 
 export type EngineStatus = 'idle' | 'starting' | 'running' | 'error';
@@ -56,7 +58,8 @@ export class AudioEngine {
   private frameListeners = new Set<FrameListener>();
   private snapshotListeners = new Set<() => void>();
   private suppressUntil = 0;
-  private guideNodes: OscillatorNode[] = [];
+  private guideNodes: AudioScheduledSourceNode[] = [];
+  private instrument: InstrumentId = 'piano';
   private stats = { transport: 0, process: null as number | null, count: 0, windowStart: 0, fps: 0 };
   private snapshot: EngineSnapshot = { status: 'idle', error: null, referencePlaying: false, diagnostics: null };
   private detector: DetectorKind = 'mpm';
@@ -154,12 +157,18 @@ export class AudioEngine {
    * Llamada y respuesta: suena la guía y, mientras tanto, se ignora el micro
    * para no detectar la propia referencia. `done` se resuelve cuando el usuario puede cantar.
    */
-  playGuide(events: readonly GuideEvent[]): { startT: number; endT: number; done: Promise<void> } {
+  /** Instrumento de la guía y las demostraciones. */
+  setInstrument(id: InstrumentId): void {
+    this.instrument = id;
+  }
+
+  playGuide(events: readonly GuideEvent[], chords?: readonly TimedChord[]): { startT: number; endT: number; done: Promise<void> } {
     const ctx = this.ctx;
     if (!ctx) return { startT: 0, endT: 0, done: Promise.resolve() };
-    const startT = ctx.currentTime + 0.05;
+    const startT = ctx.currentTime + 0.08;
     this.guideNodes = this.guideNodes.filter((n) => n.context === ctx);
-    const endT = scheduleGuide(ctx, events, startT, 440, this.guideNodes);
+    const endT = playMelody(ctx, this.instrument, events, startT, this.guideNodes);
+    if (chords?.length) playChords(ctx, this.instrument, chords, startT, this.guideNodes);
     return { startT, endT, done: this.suppressUntilTime(endT + REFERENCE_TAIL_S) };
   }
 

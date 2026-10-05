@@ -40,13 +40,14 @@ export async function importSongFromFile(file: File, options: ImportOptions = {}
 
   const left = rendered.getChannelData(0).slice();
   const right = channels > 1 ? rendered.getChannelData(1).slice() : null;
-  const { notes, quality } = await new Promise<{ notes: Extract<MelodyWorkerMessage, { type: 'done' }>['notes']; quality: ExtractionQuality }>((resolve, reject) => {
+  type Done = Extract<MelodyWorkerMessage, { type: 'done' }>;
+  const { notes, chords, quality } = await new Promise<Done>((resolve, reject) => {
     const worker = new Worker(new URL('./melody-worker.ts', import.meta.url), { type: 'module' });
     worker.onmessage = (e: MessageEvent<MelodyWorkerMessage>) => {
       if (e.data.type === 'progress') options.onProgress?.('analyzing', e.data.value);
       else {
         worker.terminate();
-        if (e.data.type === 'done') resolve({ notes: e.data.notes, quality: e.data.quality });
+        if (e.data.type === 'done') resolve(e.data);
         else reject(new Error(e.data.message));
       }
     };
@@ -61,7 +62,8 @@ export async function importSongFromFile(file: File, options: ImportOptions = {}
   // Los tiempos de las frases se muestran respecto al archivo original.
   const shifted = notes.map((n) => ({ ...n, startS: n.startS + from, endS: n.endS + from }));
   const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || 'Canción importada';
-  const song = notesToSong(shifted, { id: `import-${Date.now().toString(36)}`, title });
+  const shiftedChords = chords.map((c) => ({ ...c, startS: c.startS + from, endS: c.endS + from }));
+  const song = notesToSong(shifted, { id: `import-${Date.now().toString(36)}`, title }, { chords: shiftedChords });
   song.extraction = { quality: quality.level, stereo: quality.stereo, fromS: from, toS: to };
   return { song, durationS: decoded.duration, quality };
 }

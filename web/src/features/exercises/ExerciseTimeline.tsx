@@ -1,6 +1,7 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { audioEngine } from '../../audio/engine';
 import { displayNote } from '../../shared/labels';
+import { chordName } from '../../core/music/chords';
 import { planMidiRange, targetAt } from '../../core/exercises/plan';
 import type { ExercisePlan } from '../../core/exercises/types';
 import { median } from '../../core/pitch/tracker';
@@ -102,6 +103,24 @@ export function ExerciseTimeline({ plan, phase, framesRef, timingRef, tolerance,
           g.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
           g.textBaseline = 'middle';
         }
+      }
+
+      // Acordes encima de la melodía, como en un karaoke.
+      if (p.chords?.length) {
+        g.font = '600 12px system-ui, sans-serif';
+        g.textBaseline = 'top';
+        for (const c of p.chords) {
+          const x = xOf(c.startS);
+          g.fillStyle = color('--accent');
+          g.fillText(chordName(c.chord, tech), x + 2, 3);
+          g.strokeStyle = color('--trail-grid');
+          g.beginPath();
+          g.moveTo(Math.round(x) + 0.5, 0);
+          g.lineTo(Math.round(x) + 0.5, 16);
+          g.stroke();
+        }
+        g.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+        g.textBaseline = 'middle';
       }
 
       const timing = timingRef.current;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { audioEngine } from '../../audio/engine';
-import { guideEvents } from '../../core/exercises/guide';
+import { guideChords, guideEvents } from '../../core/exercises/guide';
 import { profileRanges } from '../../core/profile/vocal-profile';
 import { TOLERANCE_BY_LEVEL } from '../../core/scoring/pitch-scoring';
 import { describeIssue } from '../../core/songs/coach';
@@ -50,7 +50,7 @@ export function PhrasePractice({ song, phraseIndex, transpose, tempo, settings, 
 
   const listenSlow = async () => {
     setDemo(true);
-    await audioEngine.playGuide(guideEvents(plan, 0.7)).done;
+    await audioEngine.playGuide(guideEvents(plan, 0.7), settings.accompaniment ? guideChords(plan, 0.7) : undefined).done;
     setDemo(false);
   };
 

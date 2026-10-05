@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { audioEngine } from '../../audio/engine';
 import { evaluateExercise, type ExerciseEvaluation } from '../../core/exercises/evaluate';
-import { guideEvents } from '../../core/exercises/guide';
+import { guideChords, guideEvents } from '../../core/exercises/guide';
 import type { ExercisePlan } from '../../core/exercises/types';
 import type { PitchFrame } from '../../core/pitch/types';
 import { TOLERANCE_BY_LEVEL } from '../../core/scoring/pitch-scoring';
@@ -71,7 +71,7 @@ export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
     setState({ phase: 'listening', beat: null, evaluation: null, previous: [] });
 
     const events = guideEvents(plan);
-    const guide = audioEngine.playGuide(events);
+    const guide = audioEngine.playGuide(events, settings.accompaniment ? guideChords(plan) : undefined);
     timingRef.current = {
       guideStartT: guide.startT,
       guideDurationS: guide.endT - guide.startT,
@@ -106,7 +106,7 @@ export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
     // El perfil vocal aprende de cada intento (ejercicios y frases de canciones).
     profileStore.update((p) => recordEvaluation(p, evaluation, settings.octaveMode));
     setState({ phase: 'result', beat: null, evaluation, previous: recordAttempt(plan.def.id, evaluation) });
-  }, [plan, settings.level, settings.octaveMode]);
+  }, [plan, settings.level, settings.octaveMode, settings.accompaniment]);
 
   const cancel = useCallback(() => {
     runId.current++;

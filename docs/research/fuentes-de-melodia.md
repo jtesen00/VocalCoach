@@ -39,10 +39,22 @@ Archivo (MP3/M4A/WAV…) → decodeAudioData → 22,05 kHz en ESTÉREO + paso al
      8. En cada frame, el contorno más saliente (×1,5 con vibrato). Las colas débiles y los huecos
         dentro del contorno quedan sin voz, lo que separa las sílabas repetidas ("do-do").
   → notas (corrección de afinación global, cambios > 0,6 semitonos, ≥ 100 ms)
-  → frases (silencios ≥ 0,45 s; las de < 1,5 s se unen a la vecina; las de > 9 s se parten)
-  → tonalidad (Krumhansl–Schmuckler) → Song (60 pulsos por minuto: 1 pulso = 1 s)
+  → limpieza (notas < 120 ms fundidas con la vecina, saltos sueltos de octava fuera, huecos < 150 ms ligados)
+  → líneas tipo karaoke (programación dinámica: 4–9 s, cortes en las respiraciones más largas,
+    penalización por cortar en mitad de un ligado; partes instrumentales ≥ 2,5 s separan secciones)
+  → tonalidad (Krumhansl–Schmuckler) y acordes del audio (ver abajo) → Song (60 pulsos por minuto: 1 pulso = 1 s)
 ```
 
+### Acordes del audio (`core/songs/chord-recognition.ts`)
+
+```
+STFT 186 ms / salto 93 ms → cromagrama (80–1000 Hz, raíz de la magnitud) + cromagrama del bajo (35–160 Hz)
+→ similitud con 24 plantillas de tríadas (mayores y menores) + 0,5 × energía del bajo en la fundamental
+  + ventaja para los acordes de la tonalidad
+→ Viterbi (penalización por cambiar de acorde) → acordes de ≥ 0,5 s, sin acorde en los silencios
+```
+
+Medido en la mezcla de prueba (Lam–Fa–Do–Sol): 100 % en estéreo y en mono, y 90 % con voz grave. El bajo resulta decisivo: sin él, Fa se confundía con Lam y Do con Mim (acordes relativos), y el acierto se quedaba en el 45 %.
 ### Medición (`pnpm bench:melody`)
 
 Canción sintética con voz centrada (armónicos de vocal, vibrato y pausas entre sílabas), piano a la izquierda, guitarra arpegiada a la derecha **en el registro de la voz**, y bajo y batería al centro. Se ignoran ±50 ms en los bordes de nota.

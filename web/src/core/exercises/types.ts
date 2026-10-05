@@ -1,3 +1,4 @@
+import type { TimedChord } from '../music/chords';
 import type { SkillLevel } from '../scoring/pitch-scoring';
 
 /** Nota de un ejercicio, relativa a la tónica (en semitonos). */
@@ -46,4 +47,6 @@ export interface ExercisePlan {
   rootMidi: number;
   segments: PlanSegment[];
   durationS: number;
+  /** Acompañamiento (canciones): acordes en segundos desde el inicio. */
+  chords?: TimedChord[];
 }

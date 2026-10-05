@@ -2,6 +2,8 @@ import { createDetector, rmsDb } from '../pitch/detector';
 import { frames as windows } from '../pitch/signals';
 import { median, PitchTracker } from '../pitch/tracker';
 import type { PitchFrame } from '../pitch/types';
+import type { TimedChord } from '../music/chords';
+import { recognizeChords } from './chord-recognition';
 import { extractMelody, type MelodyFrame } from './melody-extraction';
 import type { MelodyNote, Song, SongPhrase, SongSection } from './types';
 
@@ -182,76 +184,162 @@ export function transcribeAudio(
   right: Float32Array | null,
   sampleRate: number,
   onProgress?: (p: number) => void,
-): { notes: TranscribedNote[]; quality: ExtractionQuality } {
-  const line = extractMelody(left, right, sampleRate, { onProgress });
+): { notes: TranscribedNote[]; chords: TimedChord[]; quality: ExtractionQuality } {
+  const line = extractMelody(left, right, sampleRate, { onProgress: (p) => onProgress?.(0.9 * p) });
   const stereo = !!right && !left.every((v, i) => Math.abs(v - right[i]) < 1e-6);
   const frames: PitchFrame[] = line.map((f) => ({ t: f.t, f0: null, midi: f.midi, clarity: 1, levelDb: 0, voiced: f.midi !== null }));
-  return { notes: segmentNotes(frames), quality: extractionQuality(line, stereo) };
+  const notes = segmentNotes(frames);
+  // Acordes del propio audio, con preferencia por los de la tonalidad de la melodía.
+  const chords = recognizeChords(left, right, sampleRate, notes.length ? estimateKey(notes) : undefined);
+  onProgress?.(1);
+  return { notes, chords, quality: extractionQuality(line, stereo) };
+}
+
+/** Limpieza de la línea melódica para que se pueda cantar y seguir (estilo karaoke). */
+export function cleanNotes(input: readonly TranscribedNote[]): TranscribedNote[] {
+  let notes = input.map((n) => ({ ...n }));
+  // 1. Notas cortísimas (< 120 ms) pegadas a una vecina cercana en altura: son transiciones o
+  //    adornos del detector; se funden con la vecina más larga.
+  for (let pass = 0; pass < 2; pass++) {
+    const out: TranscribedNote[] = [];
+    for (let i = 0; i < notes.length; i++) {
+      const n = notes[i];
+      const prev = out[out.length - 1];
+      const next = notes[i + 1];
+      const dur = n.endS - n.startS;
+      if (dur < 0.12) {
+        const nearPrev = prev && n.startS - prev.endS < 0.08 && Math.abs(prev.midi - n.midi) <= 2;
+        const nearNext = next && next.startS - n.endS < 0.08 && Math.abs(next.midi - n.midi) <= 2;
+        if (nearPrev && (!nearNext || prev.endS - prev.startS >= next.endS - next.startS)) {
+          prev.endS = n.endS;
+          continue;
+        }
+        if (nearNext) {
+          next.startS = n.startS;
+          continue;
+        }
+        if (dur < 0.08) continue; // fragmento aislado
+      }
+      out.push(n);
+    }
+    notes = out;
+  }
+  // 2. Saltos sueltos de más de una octava respecto a las dos vecinas: error de detección.
+  notes = notes.filter((n, i) => {
+    const p = notes[i - 1];
+    const x = notes[i + 1];
+    return !(p && x && Math.abs(n.midi - p.midi) > 12 && Math.abs(n.midi - x.midi) > 12 && n.endS - n.startS < 0.4);
+  });
+  // 3. Legato: los huecos breves entre notas (consonantes) se cierran alargando la nota anterior.
+  for (let i = 0; i + 1 < notes.length; i++) {
+    const gap = notes[i + 1].startS - notes[i].endS;
+    if (gap > 0 && gap < 0.15) notes[i].endS = notes[i + 1].startS;
+  }
+  return notes;
 }
 
 export interface PhraseOptions {
-  /** Silencio que separa frases (s). */
-  phraseGapS: number;
-  /** Duración máxima de una frase (s): las más largas se parten por su mayor silencio. */
-  maxPhraseS: number;
-  /** Frases por sección. */
-  phrasesPerSection: number;
+  /** Duración ideal de una línea (s). */
+  idealMinS: number;
+  idealMaxS: number;
+  /** Silencio que separa partes de la canción (instrumental): siempre corta. */
+  sectionGapS: number;
+  /** Máximo de frases por sección. */
+  maxPhrasesPerSection: number;
 }
 
-const DEFAULT_PHRASES: PhraseOptions = { phraseGapS: 0.45, maxPhraseS: 9, phrasesPerSection: 4 };
+const DEFAULT_PHRASES: PhraseOptions = { idealMinS: 4, idealMaxS: 9, sectionGapS: 2.5, maxPhrasesPerSection: 6 };
 
-/** Una frase más corta que esto (o con menos de 3 notas) se une a la vecina si están cerca. */
-const MIN_PHRASE_S = 1.5;
-const MERGE_GAP_S = 1.2;
+/** Coste de una línea según su duración: 0 en la franja ideal, cuadrático fuera. */
+function lengthCost(d: number, o: PhraseOptions): number {
+  if (d < o.idealMinS) return 2 * (o.idealMinS - d) ** 2;
+  if (d > o.idealMaxS) return 2 * (d - o.idealMaxS) ** 2;
+  return 0;
+}
 
-/** Une frases demasiado cortas con la anterior o la siguiente (respiraciones breves). */
-function mergeShort(groups: TranscribedNote[][]): TranscribedNote[][] {
-  const out: TranscribedNote[][] = [];
-  const dur = (g: TranscribedNote[]) => g[g.length - 1].endS - g[0].startS;
-  for (const g of groups) {
-    const prev = out[out.length - 1];
-    const short = (x: TranscribedNote[]) => dur(x) < MIN_PHRASE_S || x.length < 3;
-    if (prev && (short(g) || short(prev)) && g[0].startS - prev[prev.length - 1].endS < MERGE_GAP_S) prev.push(...g);
-    else out.push([...g]);
+/** Premio por cortar en un silencio de `gap` s: mejor en respiraciones largas, muy mal en mitad de un legato. */
+function boundaryCost(gap: number): number {
+  if (gap < 0.12) return 6;
+  return -3 * Math.min(gap, 1.5);
+}
+
+/**
+ * Divide notas en líneas tipo karaoke con programación dinámica: elige los cortes que
+ * dan frases de unos 4–9 s cortando en las respiraciones más largas. Los silencios largos
+ * (partes instrumentales) siempre cortan y separan secciones.
+ */
+export function karaokeLines(notes: readonly TranscribedNote[], options: Partial<PhraseOptions> = {}): { lines: TranscribedNote[][]; sectionStarts: Set<number> } {
+  const o = { ...DEFAULT_PHRASES, ...options };
+  const blocks: TranscribedNote[][] = [];
+  for (const n of notes) {
+    const b = blocks[blocks.length - 1];
+    if (b && n.startS - b[b.length - 1].endS < o.sectionGapS) b.push(n);
+    else blocks.push([n]);
   }
-  return out;
+  const lines: TranscribedNote[][] = [];
+  const sectionStarts = new Set<number>();
+  for (const b of blocks) {
+    sectionStarts.add(lines.length);
+    const n = b.length;
+    const best = new Array<number>(n + 1).fill(Infinity);
+    const from = new Array<number>(n + 1).fill(0);
+    best[0] = 0;
+    for (let j = 1; j <= n; j++) {
+      for (let i = j - 1; i >= 0; i--) {
+        const dur = b[j - 1].endS - b[i].startS;
+        if (dur > 3 * o.idealMaxS) break;
+        const gapAfter = j < n ? b[j].startS - b[j - 1].endS : 1.5;
+        const c = best[i] + lengthCost(dur, o) + boundaryCost(gapAfter);
+        if (c < best[j]) {
+          best[j] = c;
+          from[j] = i;
+        }
+      }
+    }
+    const cuts: number[] = [];
+    for (let j = n; j > 0; j = from[j]) cuts.push(j);
+    cuts.reverse();
+    let i = 0;
+    for (const j of cuts) {
+      lines.push(b.slice(i, j));
+      i = j;
+    }
+  }
+  return { lines, sectionStarts };
 }
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-function splitLong(group: TranscribedNote[], maxS: number): TranscribedNote[][] {
-  const dur = group[group.length - 1].endS - group[0].startS;
-  if (dur <= maxS || group.length < 4) return [group];
-  let cut = 1;
-  let gap = -1;
-  for (let i = 1; i < group.length; i++) {
-    const g = group[i].startS - group[i - 1].endS;
-    if (g > gap && i >= 2 && group.length - i >= 2) {
-      gap = g;
-      cut = i;
-    }
-  }
-  return [...splitLong(group.slice(0, cut), maxS), ...splitLong(group.slice(cut), maxS)];
-}
-
 /**
- * Notas → canción: frases separadas por silencios, secciones de N frases.
+ * Notas → canción con líneas tipo karaoke y, si se reconocieron, los acordes del audio.
  * Se usa 60 pulsos por minuto para que un pulso sea un segundo (no hace falta detectar el tempo).
  */
-export function notesToSong(notes: readonly TranscribedNote[], meta: { id: string; title: string }, options: Partial<PhraseOptions> = {}): Song {
+export function notesToSong(
+  rawNotes: readonly TranscribedNote[],
+  meta: { id: string; title: string },
+  options: Partial<PhraseOptions> & { chords?: readonly TimedChord[] } = {},
+): Song {
   const o = { ...DEFAULT_PHRASES, ...options };
-  const groups: TranscribedNote[][] = [];
-  for (const n of notes) {
-    const g = groups[groups.length - 1];
-    if (g && n.startS - g[g.length - 1].endS < o.phraseGapS) g.push(n);
-    else groups.push([n]);
-  }
-  const phrases: SongPhrase[] = mergeShort(groups)
-    .flatMap((g) => splitLong(g, o.maxPhraseS))
-    .filter((g) => g.length >= 3 && g.reduce((a, n) => a + n.endS - n.startS, 0) >= 0.8)
-    .map((g, i) => ({
+  const notes = cleanNotes(rawNotes);
+  const { lines, sectionStarts } = karaokeLines(notes, o);
+  const kept = lines.filter((g) => g.length >= 3 && g.reduce((a, n) => a + n.endS - n.startS, 0) >= 0.8);
+
+  const phrases: SongPhrase[] = kept.map((g, i) => {
+    const origin = g[0].startS;
+    const end = g[g.length - 1].endS;
+    const chords = (options.chords ?? [])
+      .filter((c) => c.endS > origin && c.startS < end)
+      .map((c) => {
+        const s0 = Math.max(c.startS, origin);
+        const s1 = Math.min(c.endS, end);
+        return { startBeat: s0 - origin, beats: s1 - s0, chord: c.chord };
+      })
+      .filter((c) => c.beats > 0.15);
+    return {
       id: `p${i + 1}`,
-      lyrics: `${clock(g[0].startS)} – ${clock(g[g.length - 1].endS)}`,
+      lyrics: `${clock(origin)} – ${clock(end)}`,
+      originS: origin,
+      chords: chords.length ? chords : undefined,
       notes: g.map(
         (n, j): MelodyNote => ({
           midi: n.midi,
@@ -260,12 +348,19 @@ export function notesToSong(notes: readonly TranscribedNote[], meta: { id: strin
           syllable: '',
         }),
       ),
-    }));
+    };
+  });
 
+  // Secciones: nuevas tras cada parte instrumental o cada `maxPhrasesPerSection` líneas.
   const sections: SongSection[] = [];
-  for (let i = 0; i < phrases.length; i += o.phrasesPerSection) {
-    sections.push({ name: `Parte ${sections.length + 1}`, phrases: phrases.slice(i, i + o.phrasesPerSection) });
-  }
+  kept.forEach((g, i) => {
+    const lineIndex = lines.indexOf(g);
+    const cur = sections[sections.length - 1];
+    if (!cur || sectionStarts.has(lineIndex) || cur.phrases.length >= o.maxPhrasesPerSection) {
+      sections.push({ name: `Parte ${sections.length + 1}`, phrases: [] });
+    }
+    sections[sections.length - 1].phrases.push(phrases[i]);
+  });
   return {
     id: meta.id,
     title: meta.title,
