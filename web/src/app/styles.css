@@ -179,10 +179,6 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .result-verdict.pass { color: var(--good); }
 .result-verdict.fail { color: var(--off); }
 .result-head .hint { margin: 0; }
-.feedback { padding: 0; list-style: none; margin: 16px 0; }
-.feedback li { border-left: 3px solid var(--accent); background: var(--surface); padding: 0.55rem 0.8rem; margin-bottom: 8px; }
-.feedback .feedback-success { border-left-color: var(--good); }
-.feedback .feedback-info { border-left-color: var(--line); color: var(--muted); }
 .notes-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
 .notes-table th { text-align: left; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--line); padding: 6px 4px; }
 .notes-table td { border-bottom: 1px solid var(--line); padding: 6px 4px; font-family: var(--mono); }
@@ -238,3 +234,19 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
   .exercise-list .exercise-body { grid-area: body; }
   .exercise-list li > button { grid-area: action; justify-self: start; }
 }
+
+/* Profesor virtual */
+.teacher { margin: 18px 0; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 8px; }
+.teacher-label { margin: 0; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.teacher h3 { margin: 0.15rem 0 0.4rem; font-size: 1.3rem; }
+.teacher p { margin: 0.4rem 0; }
+.teacher-progress { color: var(--good); font-weight: 600; }
+.teacher-demo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.75rem; }
+.teacher-tips-title { font-weight: 600; margin-top: 0.8rem !important; }
+.teacher-tips { margin: 0.2rem 0 0.6rem; padding-left: 1.2rem; }
+.teacher-tips li { margin: 0.25rem 0; }
+.teacher-extras { list-style: none; padding: 0; margin: 0.6rem 0 0; color: var(--muted); font-size: 0.92rem; }
+.teacher-extras li::before { content: '· '; }
+.teacher-next { margin-top: 0.9rem !important; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.teacher-next p { flex-basis: 100%; margin: 0; }
+.live-tip { min-height: 1.5em; margin: -12px 0 14px; font-size: 0.98rem; }

@@ -8,6 +8,7 @@ import {
 } from '../../core/scoring/pitch-scoring';
 import { displayNote, liveStatus } from '../../shared/labels';
 import type { Settings } from '../../shared/settings';
+import { useLiveCoach } from '../teacher/useLiveCoach';
 import { CentsMeter } from './CentsMeter';
 import { DiagnosticsPanel } from './DiagnosticsPanel';
 import { PitchTrail } from './PitchTrail';
@@ -39,6 +40,7 @@ export function TunerPage({ settings, updateSettings, onCalibrate }: Props) {
   const status = classifyCents(cents, tolerance);
   const live = liveStatus(status, cents);
   const centerMidi = hasTarget ? targetMidi : nearest?.midi ?? targetMidi;
+  const tip = useLiveCoach(status, snapshot.referencePlaying || !hasTarget);
 
   const listenAndSing = async () => {
     setTurn('listen');
@@ -94,6 +96,7 @@ export function TunerPage({ settings, updateSettings, onCalibrate }: Props) {
             </>
           )}
         </div>
+        <p className="live-tip" role="status" aria-live="polite">{tip ? `💬 ${tip.message}` : ''}</p>
         <CentsMeter cents={snapshot.referencePlaying ? null : cents} perfectCents={tolerance.perfectCents} toleranceCents={tolerance.toleranceCents} detailed={tech} />
         <p className="singing-now">
           {nearest && !snapshot.referencePlaying ? (

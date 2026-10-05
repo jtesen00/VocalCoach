@@ -4,6 +4,31 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Añadido — Fase 4: profesor virtual
+- **"Tu profe"** en el resultado de cada ejercicio: titular, qué se oyó, consejos para probar ("Prueba esto:") y hasta dos observaciones secundarias.
+- **Clasificación de errores** (`core/teacher/diagnose.ts`), con prioridad: no se oyó, otra octava, no sigue la melodía, faltan notas, notas lejos, sirena (dirección, recorrido y cortes), salto corto o largo, algo bajo o alto, cae al final, inestable, casi, superado o excelente, y vibrato (informativo).
+- **Lecciones como datos** (`core/teacher/content.ts`), en lenguaje acústico y sin diagnosticar el cuerpo.
+- **Demostraciones sonoras "🔊 Escúchalo"**:
+  - Nota correcta, la tuya y la correcta otra vez.
+  - El salto correcto frente al tuyo.
+  - Nota estable frente a nota que baila o que cae.
+  - La melodía más lenta, la sirena completa y la misma nota en otra octava.
+- **Árbol de decisión del siguiente paso:**
+  - Si superas el ejercicio, propone el siguiente.
+  - Al tercer fallo seguido por lo mismo, propone algo más fácil (menos exigencia o un ejercicio más sencillo).
+  - Si detecta que cantas en otra octava, ofrece permitirlo.
+  - Si mejoras respecto al intento anterior, lo celebra.
+- **Coach en vivo en "Canta libre"** (`core/teacher/live.ts`): consejos tras 2 s por encima o por debajo, 2,5 s cerca o 3 s afinado.
+- Historial de intentos por ejercicio durante la sesión.
+- Silencios (`rest`) en las guías sonoras; los tipos de guía pasan a `core/exercises/guide.ts`.
+- 54 tests del profesor y 5 E2E nuevos o ampliados.
+
+### Cambiado
+- La estabilidad ya no cuenta la tendencia lineal: una caída continua se diagnostica como "cae al final", no como "inestable".
+
+### Eliminado
+- `core/exercises/feedback.ts`: el profesor virtual lo sustituye.
+
 ### Cambiado
 - **Interfaz sencilla por defecto:**
   - Las notas se nombran en solfeo (Do, Re, Mi…), sin octavas, cents ni Hz.
@@ -25,7 +50,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
   - Si vale cantar en otra octava.
   - Volver a medir la voz.
   - **Mostrar detalles técnicos** (C4, cents, Hz, tabla por nota y diagnóstico), desactivado por defecto.
-- `solfegeName()` y opción `detailed` en el feedback.
+- `solfegeName()` y modo detallado opcional en los mensajes.
 - Ramas `dev` (desarrollo) y `changes` (ajustes); `main` es la principal.
 
 ## [0.2.0] — 2026-10-05 · Fase 3: ejercicios

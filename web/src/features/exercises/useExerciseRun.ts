@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { audioEngine } from '../../audio/engine';
-import type { GuideEvent } from '../../audio/guide';
 import { evaluateExercise, type ExerciseEvaluation } from '../../core/exercises/evaluate';
+import { guideEvents } from '../../core/exercises/guide';
 import type { ExercisePlan } from '../../core/exercises/types';
 import type { PitchFrame } from '../../core/pitch/types';
 import { TOLERANCE_BY_LEVEL } from '../../core/scoring/pitch-scoring';
 import type { Settings } from '../../shared/settings';
+import { recordAttempt } from './history';
 
 export type RunPhase = 'ready' | 'listening' | 'countdown' | 'singing' | 'result';
 
@@ -22,23 +23,14 @@ export interface RunState {
   phase: RunPhase;
   beat: number | null;
   evaluation: ExerciseEvaluation | null;
+  /** Intentos anteriores del mismo ejercicio en esta sesión. */
+  previous: ExerciseEvaluation[];
 }
 
 const BEATS = 3;
 const BEAT_S = 0.6;
-/** En la nota sostenida la guía dura menos que el ejercicio: basta con oír la nota. */
-const SUSTAINED_GUIDE_S = 1.5;
 /** Margen tras el final del ejercicio antes de evaluar. */
 const END_MARGIN_S = 0.3;
-
-export function guideEvents(plan: ExercisePlan): GuideEvent[] {
-  if (plan.def.kind === 'sustained') return [{ type: 'note', midi: plan.rootMidi, durationS: SUSTAINED_GUIDE_S }];
-  return plan.segments.map((s) =>
-    s.fromMidi === s.toMidi
-      ? { type: 'note', midi: s.fromMidi, durationS: s.endS - s.startS }
-      : { type: 'glide', fromMidi: s.fromMidi, toMidi: s.toMidi, durationS: s.endS - s.startS },
-  );
-}
 
 function waitUntil(t: number, isCancelled: () => boolean): Promise<boolean> {
   return new Promise((resolve) => {
@@ -58,7 +50,7 @@ function waitUntil(t: number, isCancelled: () => boolean): Promise<boolean> {
  * Los frames se acumulan en un ref (no en estado de React) y se comparten con el canvas.
  */
 export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
-  const [state, setState] = useState<RunState>({ phase: 'ready', beat: null, evaluation: null});
+  const [state, setState] = useState<RunState>({ phase: 'ready', beat: null, evaluation: null, previous: [] });
   const framesRef = useRef<PitchFrame[]>([]);
   const timingRef = useRef<RunTiming>({ guideStartT: 0, guideDurationS: 1, singT: 0, latencyS: 0 });
   const runId = useRef(0);
@@ -67,14 +59,14 @@ export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
   useEffect(() => {
     runId.current++;
     framesRef.current = [];
-    setState({ phase: 'ready', beat: null, evaluation: null});
+    setState({ phase: 'ready', beat: null, evaluation: null, previous: [] });
   }, [plan]);
 
   const start = useCallback(async () => {
     const id = ++runId.current;
     const cancelled = () => runId.current !== id;
     framesRef.current = [];
-    setState({ phase: 'listening', beat: null, evaluation: null});
+    setState({ phase: 'listening', beat: null, evaluation: null, previous: [] });
 
     const events = guideEvents(plan);
     const guide = audioEngine.playGuide(events);
@@ -109,12 +101,12 @@ export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
       startT: singT,
       latencyS: timingRef.current.latencyS,
     });
-    setState({ phase: 'result', beat: null, evaluation });
+    setState({ phase: 'result', beat: null, evaluation, previous: recordAttempt(plan.def.id, evaluation) });
   }, [plan, settings.level, settings.octaveMode]);
 
   const cancel = useCallback(() => {
     runId.current++;
-    setState({ phase: 'ready', beat: null, evaluation: null});
+    setState({ phase: 'ready', beat: null, evaluation: null, previous: [] });
   }, []);
 
   return { state, start, cancel, framesRef, timingRef };

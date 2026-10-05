@@ -7,7 +7,7 @@ Orden conceptual del spec: pitch → visualización → scoring → ejercicios �
 | 0–1 | Investigación, plan, ADRs | ✅ Hecho | ADRs aceptados |
 | 2 | Motor de pitch: captura, MPM/YIN, voicing, afinador, rango vocal, llamada y respuesta, aviso Bluetooth, diagnóstico, benchmark | ✅ Implementado · ⏳ falta medir en dispositivos reales | Criterios de [PLAN §9](PLAN.md#9-testing-y-benchmarks) en desktop + 1 Android + 1 iPhone |
 | 3 | Ejercicios: nota sostenida, secuencias, intervalos, escalas, sirenas, transposición al rango, scoring, estabilidad/vibrato, feedback básico | ✅ Implementado · ⏳ falta validar con grabaciones reales | Evaluación coherente con el juicio de un profesor en ≥ 80 % de 30 intentos grabados |
-| 4 | Profesor virtual: reglas pedagógicas ampliadas, ejemplos de audio, árbol de decisión | Pendiente | |
+| 4 | Profesor virtual: clasificación de errores, consejos como datos, demostraciones sonoras, árbol de decisión, coach en vivo ([detalle](fase-04-profesor-virtual.md)) | ✅ Implementado (en `dev`) · ⏳ falta revisión pedagógica | Un profesor de canto valida los textos; el siguiente intento mejora tras el consejo |
 | 5 | Progreso local: IndexedDB (Dexie), learning path por días, rachas, estadísticas, mejor resultado por ejercicio | Pendiente | |
 | 7 | PWA: instalación, offline, `storage.persist()` (se adelanta al backend) | Pendiente | |
 | 6 | Backend .NET (ADR-004): auth, sync de intentos, catálogo | Pendiente | |

@@ -1,12 +1,19 @@
 import type { ExerciseEvaluation } from '../../core/exercises/evaluate';
-import { basicFeedback } from '../../core/exercises/feedback';
+import type { TeacherAdvice } from '../../core/teacher/teacher';
 import { displayNote, NOTE_RESULT, stars } from '../../shared/labels';
+import { TeacherCard, type NextStepActions } from '../teacher/TeacherCard';
 
 const cents = (c: number | null) => (c === null ? '—' : `${c >= 0 ? '+' : '−'}${Math.abs(Math.round(c))} c`);
 const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)} %`);
 
-export function ExerciseResult({ evaluation: e, detailed }: { evaluation: ExerciseEvaluation; detailed: boolean }) {
-  const feedback = basicFeedback(e, 3, { detailed });
+interface Props {
+  evaluation: ExerciseEvaluation;
+  advice: TeacherAdvice;
+  actions: NextStepActions;
+  detailed: boolean;
+}
+
+export function ExerciseResult({ evaluation: e, advice, actions, detailed }: Props) {
   const n = stars(e.score, e.passed);
   return (
     <div className="result" aria-live="polite">
@@ -25,13 +32,7 @@ export function ExerciseResult({ evaluation: e, detailed }: { evaluation: Exerci
         </div>
       </div>
 
-      {feedback.length > 0 && (
-        <ul className="feedback">
-          {feedback.map((m) => (
-            <li key={m.id} className={`feedback-${m.tone}`}>{m.text}</li>
-          ))}
-        </ul>
-      )}
+      <TeacherCard advice={advice} actions={actions} />
 
       {e.notes.length > 1 && !detailed && (
         <ol className="note-chips" aria-label="Resultado de cada nota">

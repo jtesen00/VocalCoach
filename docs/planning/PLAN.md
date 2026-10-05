@@ -343,4 +343,4 @@ Sin Kubernetes, sin microservicios, sin Redis/Kafka, sin SignalR. El único serv
 1. **Medir el prototipo en dispositivos reales** (desktop Chrome/Safari, Android Chrome, iPhone Safari) con la checklist de [`docs/benchmarks/`](../benchmarks/README.md).
 2. Grabar el primer set de voces reales (con consentimiento) y pasar `pnpm bench -- voz.wav ref.csv`.
 3. Validar la Fase 3 con 30 intentos reales evaluados también por un profesor ([fase-03-ejercicios.md](fase-03-ejercicios.md)).
-4. Fase 4 (profesor virtual) y Fase 5 (progreso local). Estado actualizado en [ROADMAP.md](ROADMAP.md).
+4. Fase 4 (profesor virtual) implementada ([fase-04-profesor-virtual.md](fase-04-profesor-virtual.md)). Siguiente: Fase 5 (progreso local). Estado actualizado en [ROADMAP.md](ROADMAP.md).

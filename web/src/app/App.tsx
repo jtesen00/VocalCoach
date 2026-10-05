@@ -71,7 +71,7 @@ export function App() {
         ) : view === 'tuner' ? (
           <TunerPage settings={settings} updateSettings={updateSettings} onCalibrate={() => setView('range')} />
         ) : view === 'exercises' ? (
-          <ExercisesPage settings={settings} onCalibrate={() => setView('range')} />
+          <ExercisesPage settings={settings} updateSettings={updateSettings} onCalibrate={() => setView('range')} />
         ) : view === 'settings' ? (
           <SettingsPage settings={settings} updateSettings={updateSettings} onMeasureVoice={() => setView('range')} />
         ) : (

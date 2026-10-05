@@ -2,6 +2,14 @@
 
 Formato: fecha · decisión · motivo · referencia. Lo más reciente arriba.
 
+## 2026-10-05 (noche) · Fase 4
+- **El profesor es determinista y basado en reglas, sin LLM:** diagnóstico (taxonomía con prioridad), lecciones como datos y árbol de decisión. · Predecible, gratis, offline y testeable; un LLM no aporta para corregir afinación y no puede escuchar el audio. · [fase-04](../planning/fase-04-profesor-virtual.md)
+- **Un solo problema principal por intento**, más un máximo de 2 observaciones secundarias sin redundancias. · Un alumno principiante no puede corregir cinco cosas a la vez.
+- **Demostraciones con el sintetizador de la guía**, sin grabaciones: comparan "así suena / así sonó". · Sin contenido externo ni copyright, y funciona sin conexión.
+- **"Algo más fácil" solo tras 3 fallos seguidos por el mismo motivo.** · Evita frustrar sin rendirse demasiado pronto.
+- **La estabilidad excluye la tendencia lineal.** · Una caída continua es otro problema ("cae al final") con otro consejo.
+- **Coach en vivo por duración** (2 s bajo/alto, 3 s afinado), con 0,3 s de tolerancia a frames sueltos. · Spec §18.
+
 ## 2026-10-05 (tarde)
 - **Interfaz sencilla por defecto:** solfeo sin octava, sin cents ni Hz, mensajes de acción ("Sube un poco"). Lo técnico, detrás de "Mostrar detalles técnicos" en Ajustes. · Un usuario normal solo quiere aprender a cantar y mejorar.
 - **El nivel se presenta como exigencia de la corrección** (Relajado, Normal, Exigente), no como nivel del usuario.

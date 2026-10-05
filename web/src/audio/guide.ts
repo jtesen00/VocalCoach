@@ -1,9 +1,7 @@
+import type { GuideEvent } from '../core/exercises/guide';
 import { midiToFreq } from '../core/music/notes';
 
-/** Evento de la guía de referencia: nota fija o deslizamiento (sirena). */
-export type GuideEvent =
-  | { type: 'note'; midi: number; durationS: number }
-  | { type: 'glide'; fromMidi: number; toMidi: number; durationS: number };
+export type { GuideEvent };
 
 const LEVEL = 0.22;
 
@@ -23,6 +21,10 @@ export function scheduleGuide(ctx: AudioContext, events: readonly GuideEvent[], 
   let t = start;
   for (const ev of events) {
     const end = t + ev.durationS;
+    if (ev.type === 'rest') {
+      t = end;
+      continue;
+    }
     const osc = voice(ctx);
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0, t);

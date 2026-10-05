@@ -3,6 +3,7 @@ import { EXERCISES } from '../../core/exercises/catalog';
 import { buildPlan, rootForRange } from '../../core/exercises/plan';
 import type { ExerciseDef, ExercisePlan } from '../../core/exercises/types';
 import { TOLERANCE_BY_LEVEL } from '../../core/scoring/pitch-scoring';
+import { advise } from '../../core/teacher/teacher';
 import { DIFFICULTY_DOTS, DIFFICULTY_LABEL, displayNote, KIND_LABEL } from '../../shared/labels';
 import type { Settings } from '../../shared/settings';
 import { ExerciseResult } from './ExerciseResult';
@@ -12,6 +13,7 @@ import { useExerciseRun } from './useExerciseRun';
 
 interface Props {
   settings: Settings;
+  updateSettings: (patch: Partial<Settings>) => void;
   onCalibrate: () => void;
 }
 
@@ -34,9 +36,20 @@ function Difficulty({ def }: { def: ExerciseDef }) {
   );
 }
 
-export function ExercisesPage({ settings, onCalibrate }: Props) {
+export function ExercisesPage({ settings, updateSettings, onCalibrate }: Props) {
   const [selected, setSelected] = useState<ExerciseDef | null>(null);
-  if (selected) return <ExerciseRunner def={selected} settings={settings} onBack={() => setSelected(null)} />;
+  if (selected) {
+    return (
+      <ExerciseRunner
+        key={selected.id}
+        def={selected}
+        settings={settings}
+        updateSettings={updateSettings}
+        onSelect={(id) => setSelected(EXERCISES.find((x) => x.id === id) ?? null)}
+        onBack={() => setSelected(null)}
+      />
+    );
+  }
 
   return (
     <section className="exercises" aria-label="Practicar">
@@ -69,12 +82,40 @@ export function ExercisesPage({ settings, onCalibrate }: Props) {
   );
 }
 
-function ExerciseRunner({ def, settings, onBack }: { def: ExerciseDef; settings: Settings; onBack: () => void }) {
+interface RunnerProps {
+  def: ExerciseDef;
+  settings: Settings;
+  updateSettings: (patch: Partial<Settings>) => void;
+  onSelect: (exerciseId: string) => void;
+  onBack: () => void;
+}
+
+function ExerciseRunner({ def, settings, updateSettings, onSelect, onBack }: RunnerProps) {
   const [root, setRoot] = useState(() => rootForRange(def, settings.range));
   const plan = useMemo(() => buildPlan(def, root), [def, root]);
   const { state, start, cancel, framesRef, timingRef } = useExerciseRun(plan, settings);
   const running = state.phase === 'listening' || state.phase === 'countdown' || state.phase === 'singing';
   const tech = settings.showDetails;
+  const advice = useMemo(
+    () =>
+      state.evaluation &&
+      advise({
+        plan,
+        evaluation: state.evaluation,
+        history: state.previous,
+        catalog: EXERCISES,
+        octaveMode: settings.octaveMode,
+        level: settings.level,
+        detailed: tech,
+      }),
+    [plan, state.evaluation, state.previous, settings.octaveMode, settings.level, tech],
+  );
+  const actions = {
+    titleOf: (id: string) => EXERCISES.find((x) => x.id === id)?.title ?? id,
+    onExercise: onSelect,
+    onRelax: () => updateSettings({ level: 'beginner' }),
+    onAllowOctave: () => updateSettings({ octaveMode: 'pitch-class' }),
+  };
 
   return (
     <section className="runner" aria-label={def.title}>
@@ -124,7 +165,9 @@ function ExerciseRunner({ def, settings, onBack }: { def: ExerciseDef; settings:
         {state.phase === 'result' && <button onClick={onBack}>Otro ejercicio</button>}
       </div>
 
-      {state.phase === 'result' && state.evaluation && <ExerciseResult evaluation={state.evaluation} detailed={tech} />}
+      {state.phase === 'result' && state.evaluation && advice && (
+        <ExerciseResult evaluation={state.evaluation} advice={advice} actions={actions} detailed={tech} />
+      )}
     </section>
   );
 }

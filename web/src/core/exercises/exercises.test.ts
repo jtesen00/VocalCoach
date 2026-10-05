@@ -8,7 +8,6 @@ import { makeRange } from '../range/vocal-range';
 import { TOLERANCE_BY_LEVEL } from '../scoring/pitch-scoring';
 import { EXERCISES, findExercise } from './catalog';
 import { evaluateExercise, type EvaluationOptions } from './evaluate';
-import { basicFeedback } from './feedback';
 import { buildPlan, rootForRange, targetAt } from './plan';
 import { analyseStability } from './stability';
 import type { ExercisePlan } from './types';
@@ -85,7 +84,6 @@ describe('nota sostenida', () => {
     expect(e.notes[0].status).toBe('perfect');
     expect(e.passed).toBe(true);
     expect(e.score).toBeGreaterThanOrEqual(95);
-    expect(basicFeedback(e)[0].id).toBe('great');
   });
 
   it('el ataque desafinado (primeros 250 ms) no penaliza', () => {
@@ -97,34 +95,29 @@ describe('nota sostenida', () => {
     const e = evaluateExercise(plan('sustained-3s'), synth(3, () => 59.6), opts);
     expect(e.notes[0].status).toBe('too_low');
     expect(e.passed).toBe(false);
-    expect(basicFeedback(e).map((m) => m.id)).toContain('consistently-low');
   });
 
   it('vibrato centrado → bien evaluado y mencionado', () => {
     const e = evaluateExercise(plan('sustained-3s'), synth(3, (t) => 60 + 0.4 * Math.sin(2 * Math.PI * 5.5 * t)), opts);
     expect(['perfect', 'close']).toContain(e.notes[0].status);
     expect(e.notes[0].vibrato).not.toBeNull();
-    expect(basicFeedback(e, 5).map((m) => m.id)).toContain('vibrato');
   });
 
   it('temblor aleatorio → inestable', () => {
     const r = rng(9);
     const e = evaluateExercise(plan('sustained-3s'), synth(3, () => 60 + (r() - 0.5) * 1.4), opts);
     expect(e.notes[0].status).toBe('unstable');
-    expect(basicFeedback(e).map((m) => m.id)).toContain('unstable');
   });
 
   it('la nota cae al final → consejo de reservar aire', () => {
     const e = evaluateExercise(plan('sustained-3s'), synth(3, (t) => (t < 2 ? 60 : 60 - 0.35 * (t - 2) * 2)), opts);
     expect(e.notes[0].endDriftCents!).toBeLessThan(-20);
-    expect(basicFeedback(e, 5).map((m) => m.id)).toContain('falling-end');
   });
 
   it('silencio → sin voz', () => {
     const e = evaluateExercise(plan('sustained-3s'), synth(3, () => null), opts);
     expect(e.notes[0].status).toBe('no_voice');
     expect(e.passed).toBe(false);
-    expect(basicFeedback(e).map((m) => m.id)).toEqual(['no-voice']);
   });
 
   it('modo cualquier octava: una octava abajo cuenta como afinado', () => {
@@ -166,10 +159,6 @@ describe('secuencias e intervalos', () => {
     const e = evaluateExercise(doReMi, synth(4.5, sing([60, 62, 63.4, 62, 60])), opts);
     expect(e.notes[2].status).toBe('too_low');
     expect(e.accuracy).toBeCloseTo(0.8, 2);
-    const simple = basicFeedback(e).find((m) => m.id === 'wrong-notes')!.text;
-    expect(simple).toContain('nota 3 (Mi) quedó baja (bastante)');
-    const detailed = basicFeedback(e, 3, { detailed: true }).find((m) => m.id === 'wrong-notes')!.text;
-    expect(detailed).toContain('nota 3 (E4) quedó baja (−60 c)');
   });
 
   it('dos notas equivocadas → no superado', () => {
@@ -181,16 +170,6 @@ describe('secuencias e intervalos', () => {
     const e = evaluateExercise(doReMi, synth(4.5, (t) => (t >= 1.8 && t < 2.7 ? null : sing([60, 62, 64, 62, 60])(t))), opts);
     expect(e.notes[2].status).toBe('no_voice');
     expect(e.passed).toBe(false);
-    expect(basicFeedback(e).map((m) => m.id)).toContain('missing-notes');
-  });
-
-  it('cantar siempre la misma nota → "sigue la guía", no un consejo de afinación', () => {
-    const e = evaluateExercise(plan('scale-five'), synth(6.3, () => 61), opts);
-    const ids = basicFeedback(e, 5).map((m) => m.id);
-    expect(ids).toContain('not-following');
-    expect(ids).not.toContain('wrong-notes');
-    expect(ids).not.toContain('consistently-low');
-    expect(ids).not.toContain('consistently-high');
   });
 
   it('intervalo: mide el salto cantado', () => {
@@ -198,31 +177,6 @@ describe('secuencias e intervalos', () => {
     const e = evaluateExercise(p, synth(3, (t) => (t < 1.5 ? 60 : 66.6)), opts);
     expect(e.interval!.targetCents).toBe(700);
     expect(e.interval!.errorCents!).toBeCloseTo(-40, 6);
-    expect(basicFeedback(e, 5).find((m) => m.id === 'interval')!.text).toContain('corto');
-  });
-});
-
-describe('lenguaje del feedback', () => {
-  const cases = [
-    evaluateExercise(plan('sustained-3s'), synth(3, () => 59.6), opts),
-    evaluateExercise(plan('steps-do-re-mi'), synth(4.5, () => 61), opts),
-    evaluateExercise(plan('interval-fifth'), synth(3, (t) => (t < 1.5 ? 60 : 66.6)), opts),
-    evaluateExercise(plan('sustained-3s'), synth(3, (t) => 60 + 0.4 * Math.sin(2 * Math.PI * 5.5 * t)), opts),
-    evaluateExercise(plan('siren-up'), synth(3, (t) => 60 + 5 * (t / 3)), opts),
-  ];
-
-  it('modo sencillo: sin cents, Hz ni nombres con octava', () => {
-    for (const e of cases) {
-      for (const m of basicFeedback(e, 10)) {
-        expect(m.text).not.toMatch(/\d+ c\b|Hz|[A-G]#?\d/);
-      }
-    }
-  });
-
-  it('modo detallado: incluye las cifras técnicas', () => {
-    const texts = cases.flatMap((e) => basicFeedback(e, 10, { detailed: true }).map((m) => m.text)).join(' ');
-    expect(texts).toMatch(/−40 c/);
-    expect(texts).toMatch(/Hz/);
   });
 });
 
@@ -247,13 +201,11 @@ describe('sirenas', () => {
     const e = evaluateExercise(up, synth(3, (t) => (Math.floor(t / 0.5) % 2 === 1 && t % 0.5 < 0.25 ? null : 60 + 12 * (t / 3))), opts);
     expect(e.siren!.breaks).toBeGreaterThan(1);
     expect(e.passed).toBe(false);
-    expect(basicFeedback(e, 5).map((m) => m.id)).toContain('siren-breaks');
   });
 
   it('recorrido parcial → cobertura baja', () => {
     const e = evaluateExercise(up, synth(3, (t) => 60 + 5 * (t / 3)), opts);
     expect(e.siren!.coverage).toBeLessThan(0.6);
-    expect(basicFeedback(e, 5).map((m) => m.id)).toContain('siren-coverage');
   });
 
   it('dirección contraria → no superado', () => {

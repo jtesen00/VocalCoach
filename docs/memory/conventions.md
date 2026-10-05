@@ -5,7 +5,7 @@
 - `web/src/audio/` es lo único que toca Web Audio y `getUserMedia`. El motor es un singleton (`audioEngine`) independiente de React.
 - Organización por funcionalidad en `features/`. React solo recibe estado de baja frecuencia (≈ 15 Hz); lo de alta frecuencia se dibuja en canvas con `requestAnimationFrame` leyendo de refs.
 - Tiempos siempre en el **reloj del AudioContext** (`frame.t`, `audioEngine.now()`), nunca `Date.now()`, para alinear audio y evaluación.
-- Lógica pedagógica como **datos o reglas** (`catalog.ts`, `feedback.ts`), no dentro de componentes.
+- Lógica pedagógica como **datos o reglas** (`catalog.ts`, `core/teacher/content.ts`, `LIVE_RULES`), no dentro de componentes.
 - UI, comentarios y documentación en español. Los nombres de código, en inglés.
 - **Interfaz sencilla por defecto:** nada de cents, Hz ni notas con octava salvo con `settings.showDetails`. Usar `displayNote(midi, detailed)` y las etiquetas de `shared/labels.ts`. Los mensajes dicen qué hacer ("Sube un poco"), no qué está mal.
 - Estados con texto e icono, además del color. Controles con `aria-label`, anuncios con `aria-live`.

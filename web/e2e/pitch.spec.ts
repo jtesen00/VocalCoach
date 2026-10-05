@@ -42,12 +42,15 @@ test('detalles técnicos opcionales: nota con octava, cents y diagnóstico', asy
   await expect(page.locator('dt:has-text("Supresión de ruido") + dd')).toHaveText('desactivado');
 });
 
-test('octava exacta frente a "vale más grave o más agudo"', async ({ page }) => {
+test('octava exacta frente a "vale más grave o más agudo", con consejo en vivo', async ({ page }) => {
   await start(page, { range: { lowMidi: 43, highMidi: 53 }, octaveMode: 'exact' });
   await page.getByRole('button', { name: 'Canta libre' }).click();
   await expect(page.getByRole('group', { name: 'Nota a cantar' }).locator('output')).toHaveText('Do');
   // Objetivo C3, el micro canta C4: una octava por encima.
   await expect(status(page)).toHaveText('Baja bastante', { timeout: 5_000 });
+
+  // Coach en vivo: tras 2 s por encima, un consejo.
+  await expect(page.locator('.live-tip')).toContainText('Llevas un rato por encima', { timeout: 5_000 });
 
   await page.getByRole('button', { name: 'Ajustes' }).click();
   await page.getByLabel('Vale cantar la misma nota más grave o más aguda').check();

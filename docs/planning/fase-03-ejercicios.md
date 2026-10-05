@@ -28,7 +28,7 @@ Flujo de cada intento (llamada y respuesta): **guía** (el micro se ignora) → 
 | Sirenas como trayectoria | Cobertura de semitonos, dirección, cortes (≥ 150 ms); supera con ≥ 80 %, ≥ 70 % y ≤ 1 corte; no se evalúan como notas | ✅ |
 | Modo "cualquier octava" | Por nota en notas; desplazamiento único en sirenas | ✅ |
 
-## Épica 3.3 — Feedback básico (`feedback.ts`)
+## Épica 3.3 — Feedback básico (sustituido en la Fase 4 por `core/teacher/`)
 
 Reglas declarativas en orden de prioridad, máximo 3 mensajes, lenguaje acústico (nunca fisiológico): sin voz, superado, notas sin cantar, misma nota todo el rato, sesgo bajo/alto (≤ 1 semitono), notas equivocadas, inestable, nota que cae al final, intervalo corto/largo, cortes, cobertura y dirección de la sirena, vibrato (informativo). El profesor de la Fase 4 las amplía.
 
