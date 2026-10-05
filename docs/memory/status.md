@@ -24,6 +24,7 @@ _Última actualización: 2026-10-05 · versión 0.2.0 + interfaz sencilla + Fase
 4. Fase 5: progreso local en IndexedDB (incluye el historial que usa el profesor), learning path y mejor resultado por ejercicio.
 
 ## Preguntas abiertas
+- IA: ¿primer caso de uso (profe conversacional o letra para importadas)? ¿Clave en el navegador (solo pruebas) o proxy? Ver `docs/research/ia-proveedores.md`.
 - ¿Confirmar que Dapper se quiere para las consultas del backend? Se interpretó que sí.
 - ¿Cuánto debe durar cada "día" del learning path y qué ejercicios incluye cada uno? (Fase 5)
 
