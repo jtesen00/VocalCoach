@@ -4,7 +4,17 @@ import { buildPlan, rootForRange } from '../../core/exercises/plan';
 import type { ExerciseDef, ExercisePlan } from '../../core/exercises/types';
 import { TOLERANCE_BY_LEVEL } from '../../core/scoring/pitch-scoring';
 import { advise } from '../../core/teacher/teacher';
-import { DIFFICULTY_DOTS, DIFFICULTY_LABEL, displayNote, KIND_LABEL } from '../../shared/labels';
+import { DIFFICULTY_DOTS, DIFFICULTY_LABEL, displayNote, KIND_LABEL, stars } from '../../shared/labels';
+import type { PathStep } from '../../core/progress/path';
+import { localDay, summarize } from '../../core/progress/progress';
+import { SONGS } from '../../core/songs/catalog';
+import { allPhrases } from '../../core/songs/melody';
+import type { Song } from '../../core/songs/types';
+import { useAttempts } from '../../shared/progress-store';
+import { practiceTranspose, setSongVersion } from '../../shared/song-store';
+import { PathCard } from '../progress/PathCard';
+import { PhrasePractice } from '../songs/PhrasePractice';
+import { Stars } from '../songs/Stars';
 import type { Settings } from '../../shared/settings';
 import { ExerciseResult } from './ExerciseResult';
 import { ExerciseTimeline } from './ExerciseTimeline';
@@ -38,6 +48,38 @@ function Difficulty({ def }: { def: ExerciseDef }) {
 
 export function ExercisesPage({ settings, updateSettings, onCalibrate }: Props) {
   const [selected, setSelected] = useState<ExerciseDef | null>(null);
+  const [phrase, setPhrase] = useState<{ song: Song; index: number; transpose: number } | null>(null);
+  const { attempts } = useAttempts();
+  const best = useMemo(() => summarize(attempts, localDay(Date.now())).byItem, [attempts]);
+
+  const openStep = (step: PathStep) => {
+    if (step.kind === 'exercise') {
+      setSelected(EXERCISES.find((x) => x.id === step.itemId) ?? null);
+      return;
+    }
+    const [songId, phraseId] = step.itemId.split('/');
+    const song = SONGS.find((x) => x.id === songId);
+    const index = song ? allPhrases(song).findIndex((r) => r.phrase.id === phraseId) : -1;
+    if (!song || index < 0) return;
+    const transpose = practiceTranspose(song);
+    setSongVersion(song.id, transpose);
+    setPhrase({ song, index, transpose });
+  };
+
+  if (phrase) {
+    return (
+      <PhrasePractice
+        key={`${phrase.song.id}-${phrase.index}`}
+        song={phrase.song}
+        phraseIndex={phrase.index}
+        transpose={phrase.transpose}
+        tempo={1}
+        settings={settings}
+        onBack={() => setPhrase(null)}
+        backLabel="← Volver a Practicar"
+      />
+    );
+  }
   if (selected) {
     return (
       <ExerciseRunner
@@ -59,6 +101,8 @@ export function ExercisesPage({ settings, updateSettings, onCalibrate }: Props) 
           Los ejercicios se adaptan a tu voz. <button className="link" onClick={onCalibrate}>Mídela primero</button> (1 minuto) para que no tengas que forzar.
         </p>
       )}
+      <PathCard onStep={openStep} />
+      <h3>Todos los ejercicios</h3>
       <ul className="exercise-list">
         {EXERCISES.map((def) => {
           const plan = buildPlan(def, rootForRange(def, settings.range));
@@ -72,6 +116,15 @@ export function ExercisesPage({ settings, updateSettings, onCalibrate }: Props) 
                   {KIND_LABEL[def.kind]} · <Difficulty def={def} /> · {seconds(plan)}
                 </p>
                 {settings.showDetails && <p className="exercise-notes">{describePlan(plan, true)}</p>}
+                {(() => {
+                  const b = best.get(def.id);
+                  return b && (
+                    <p className="exercise-best">
+                      Tu mejor: <Stars value={stars(b.best, b.bestPassed)} max={3} label="Tu mejor resultado" />
+                      {settings.showDetails && <span className="hint"> {Math.round(b.best)} %</span>}
+                    </p>
+                  );
+                })()}
               </div>
               <button onClick={() => setSelected(def)} aria-label={`Practicar ${def.title}`}>Practicar</button>
             </li>

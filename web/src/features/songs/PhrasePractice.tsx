@@ -10,6 +10,7 @@ import type { Song } from '../../core/songs/types';
 import { profileStore } from '../../shared/profile-store';
 import type { Settings } from '../../shared/settings';
 import { recordPhrase, type PhraseRecord } from '../../shared/song-store';
+import { recordAttempt } from '../../shared/progress-store';
 import { ExerciseTimeline } from '../exercises/ExerciseTimeline';
 import { useExerciseRun } from '../exercises/useExerciseRun';
 import { LiveSongCue } from './LiveSongCue';
@@ -32,7 +33,7 @@ const ICON = { good: '✓', fair: '⚠', weak: '✗' } as const;
 export function PhrasePractice({ song, phraseIndex, transpose, tempo, settings, onBack, onTrain, onNext, backLabel = '← Volver a la canción' }: Props) {
   const ref = useMemo(() => allPhrases(song)[phraseIndex], [song, phraseIndex]);
   const plan = useMemo(() => phrasePlan(ref, transpose, tempo), [ref, transpose, tempo]);
-  const { state, start, cancel, framesRef, timingRef } = useExerciseRun(plan, settings);
+  const { state, start, cancel, framesRef, timingRef } = useExerciseRun(plan, settings, { record: false });
   const [result, setResult] = useState<{ score: PhraseResult; record: PhraseRecord | null } | null>(null);
   const [demo, setDemo] = useState(false);
   const running = state.phase === 'listening' || state.phase === 'countdown' || state.phase === 'singing';
@@ -45,6 +46,15 @@ export function PhrasePractice({ song, phraseIndex, transpose, tempo, settings, 
     const score = scorePhrase(plan, state.evaluation, settings.octaveMode, profileRanges(profileStore.get()));
     // Solo los intentos a velocidad normal cuentan para el progreso y para elegir tono.
     const record = tempo === 1 ? recordPhrase(song.id, transpose, ref.phrase.id, score.score, score.accuracy, score.issue) : null;
+    // Historial (Fase 5): cuenta el tiempo cantado; solo supera a velocidad normal.
+    recordAttempt({
+      kind: 'phrase',
+      itemId: `${song.id}/${ref.phrase.id}`,
+      score: score.score,
+      accuracy: score.accuracy,
+      passed: tempo === 1 && score.status === 'good',
+      durationS: plan.durationS,
+    });
     setResult({ score, record });
   }, [state.phase, state.evaluation]); // eslint-disable-line react-hooks/exhaustive-deps
 

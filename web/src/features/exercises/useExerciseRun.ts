@@ -6,7 +6,7 @@ import type { ExercisePlan } from '../../core/exercises/types';
 import type { PitchFrame } from '../../core/pitch/types';
 import { TOLERANCE_BY_LEVEL } from '../../core/scoring/pitch-scoring';
 import type { Settings } from '../../shared/settings';
-import { recordAttempt } from './history';
+import { recordAttempt } from '../../shared/progress-store';
 import { recordEvaluation } from '../../core/profile/vocal-profile';
 import { profileStore } from '../../shared/profile-store';
 
@@ -25,7 +25,7 @@ export interface RunState {
   phase: RunPhase;
   beat: number | null;
   evaluation: ExerciseEvaluation | null;
-  /** Intentos anteriores del mismo ejercicio en esta sesión. */
+  /** Intentos anteriores del mismo ejercicio (guardados en el dispositivo). */
   previous: ExerciseEvaluation[];
 }
 
@@ -49,9 +49,12 @@ function waitUntil(t: number, isCancelled: () => boolean): Promise<boolean> {
 
 /**
  * Orquesta un intento: guía (llamada) → cuenta atrás → canto (respuesta) → evaluación.
+ * Con `record` (por defecto) el intento se guarda en el historial como ejercicio; las
+ * frases de canción lo guardan ellas mismas con su propia puntuación.
  * Los frames se acumulan en un ref (no en estado de React) y se comparten con el canvas.
  */
-export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
+export function useExerciseRun(plan: ExercisePlan, settings: Settings, options: { record?: boolean } = {}) {
+  const record = options.record ?? true;
   const [state, setState] = useState<RunState>({ phase: 'ready', beat: null, evaluation: null, previous: [] });
   const framesRef = useRef<PitchFrame[]>([]);
   const timingRef = useRef<RunTiming>({ guideStartT: 0, guideDurationS: 1, singT: 0, latencyS: 0 });
@@ -105,8 +108,18 @@ export function useExerciseRun(plan: ExercisePlan, settings: Settings) {
     });
     // El perfil vocal aprende de cada intento (ejercicios y frases de canciones).
     profileStore.update((p) => recordEvaluation(p, evaluation, settings.octaveMode));
-    setState({ phase: 'result', beat: null, evaluation, previous: recordAttempt(plan.def.id, evaluation) });
-  }, [plan, settings.level, settings.octaveMode, settings.accompaniment]);
+    // Historial persistente (Fase 5): el profe compara con los intentos anteriores, de esta y otras sesiones.
+    const previous = !record ? [] : recordAttempt({
+      kind: 'exercise',
+      itemId: plan.def.id,
+      score: evaluation.score,
+      accuracy: evaluation.accuracy,
+      passed: evaluation.passed,
+      durationS: plan.durationS,
+      evaluation,
+    });
+    setState({ phase: 'result', beat: null, evaluation, previous: previous.flatMap((a) => (a.evaluation ? [a.evaluation] : [])) });
+  }, [plan, settings.level, settings.octaveMode, settings.accompaniment, record]);
 
   const cancel = useCallback(() => {
     runId.current++;

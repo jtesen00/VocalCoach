@@ -5,12 +5,13 @@ import { RangeCalibration } from '../features/range/RangeCalibration';
 import { SongsPage } from '../features/songs/SongsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { TunerPage } from '../features/tuner/TunerPage';
+import { ProgressPage } from '../features/progress/ProgressPage';
 import { useEngineSnapshot } from '../features/tuner/useEngine';
 import { recordCalibration } from '../core/profile/vocal-profile';
 import { profileStore } from '../shared/profile-store';
 import { useSettings } from '../shared/settings';
 
-type View = 'exercises' | 'songs' | 'tuner' | 'range' | 'settings';
+type View = 'exercises' | 'songs' | 'tuner' | 'range' | 'progress' | 'settings';
 
 export function App() {
   const [settings, updateSettings] = useSettings();
@@ -42,6 +43,7 @@ export function App() {
                 ['songs', 'Canciones'],
                 ['tuner', 'Canta libre'],
                 ['range', 'Mi voz'],
+                ['progress', 'Progreso'],
                 ['settings', 'Ajustes'],
               ] as const
             ).map(([id, label]) => (
@@ -85,6 +87,8 @@ export function App() {
           <ExercisesPage settings={settings} updateSettings={updateSettings} onCalibrate={() => setView('range')} />
         ) : view === 'songs' ? (
           <SongsPage settings={settings} updateSettings={updateSettings} onMeasure={() => setView('range')} />
+        ) : view === 'progress' ? (
+          <ProgressPage settings={settings} />
         ) : view === 'settings' ? (
           <SettingsPage settings={settings} updateSettings={updateSettings} onMeasureVoice={() => setView('range')} />
         ) : (

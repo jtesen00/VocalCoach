@@ -4,6 +4,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Añadido — Fase 5: progreso local
+- **Historial de intentos en IndexedDB** (Dexie):
+  - un registro inmutable por intento, con UUID del cliente y solo agregados;
+  - se conserva al cerrar y volver a abrir la app;
+  - el profe compara también con intentos de días anteriores.
+- **Camino de aprendizaje de 10 días** en Practicar. Cada día tiene un objetivo y sus pasos, que combinan ejercicios y frases de canción. Se desbloquea al superar (≥ 80 %) el anterior.
+- **Racha** de días seguidos, con la mejor racha.
+- **Pestaña Progreso:**
+  - racha, días del camino, días practicados y minutos cantando;
+  - calendario de 5 semanas y media semanal;
+  - mejor resultado por ejercicio y por frase;
+  - borrar el progreso.
+- **Estrellas de tu mejor resultado** en cada ejercicio.
+- Tests:
+  - unitarios de racha, resumen y camino;
+  - E2E que supera el día 1, comprueba la racha y el progreso, recarga la página y borra el progreso.
+
 ### Mejorado — Guía con instrumentos grabados y extracción de MP3 mucho más precisa
 - **La guía suena con grabaciones reales nota a nota**, ya no con osciladores, que sonaban "a órgano":
   - piano de cola Salamander;

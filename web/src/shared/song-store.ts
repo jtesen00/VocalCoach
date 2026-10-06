@@ -1,5 +1,8 @@
 import type { PhraseIssue } from '../core/songs/scoring';
 import { createLocalStore } from './local-store';
+import { recommendKey } from '../core/songs/key';
+import type { Song } from '../core/songs/types';
+import { profileStore } from './profile-store';
 
 export interface PhraseRecord {
   attempts: number;
@@ -55,4 +58,9 @@ export function keyHistory(songId: string): Record<string, number[]> {
     if (acc.length) out[key] = acc;
   }
   return out;
+}
+
+/** Versión con la que se practica una canción: la elegida o, si no hay, la recomendada para tu voz. */
+export function practiceTranspose(song: Song): number {
+  return songProgress(song.id).transpose ?? recommendKey(song, profileStore.get(), keyHistory(song.id)).best.transpose;
 }

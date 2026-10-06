@@ -16,6 +16,7 @@
     "bench:melody": "tsx bench/melody.ts"
   },
   "dependencies": {
+    "dexie": "^4.4.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

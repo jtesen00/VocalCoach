@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { SONGS } from '../../core/songs/catalog';
 import { songDifficulty } from '../../core/songs/difficulty';
-import { recommendKey } from '../../core/songs/key';
 import { allPhrases } from '../../core/songs/melody';
 import type { Song } from '../../core/songs/types';
 import { profileStore } from '../../shared/profile-store';
 import type { Settings } from '../../shared/settings';
 import { importedSongsStore } from '../../shared/imported-songs';
-import { keyHistory, setSongVersion, songProgress, songStore } from '../../shared/song-store';
+import { practiceTranspose, setSongVersion, songStore } from '../../shared/song-store';
 import { ImportSong } from './ImportSong';
 import { PhrasePractice } from './PhrasePractice';
 import { SongOverview } from './SongOverview';
@@ -32,10 +31,9 @@ export function SongsPage({ settings, updateSettings, onMeasure }: Props) {
   const profile = profileStore.use();
   songStore.use();
   const song = view.kind === 'list' ? null : songs.find((s) => s.id === view.id) ?? null;
-  const transposeOf = (s: Song) => songProgress(s.id).transpose ?? recommendKey(s, profile, keyHistory(s.id)).best.transpose;
   /** Al empezar a practicar se fija la versión: lo aprendido afecta a la próxima recomendación, no a la práctica en curso. */
   const practise = (s: Song, kind: 'phrase' | 'training', index: number) => {
-    const transpose = transposeOf(s);
+    const transpose = practiceTranspose(s);
     setSongVersion(s.id, transpose);
     setView({ kind, id: s.id, index, transpose });
   };
@@ -93,7 +91,7 @@ export function SongsPage({ settings, updateSettings, onMeasure }: Props) {
       )}
       <ul className="exercise-list song-list">
         {SONGS.map((s) => {
-          const d = songDifficulty(s, transposeOf(s), profile);
+          const d = songDifficulty(s, practiceTranspose(s), profile);
           return (
             <li key={s.id}>
               <div className="exercise-body">
