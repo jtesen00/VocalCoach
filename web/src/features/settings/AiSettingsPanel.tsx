@@ -31,6 +31,7 @@ export function AiSettingsPanel({ detailed }: { detailed: boolean }) {
         Un profe que te explica cada intento con sus palabras y responde tus dudas. Usa <strong>Groq</strong> (gratuito para probar).
         Solo se envía un resumen en texto de tu intento: nunca tu voz.
       </p>
+      <p className="hint">Si entras con tu cuenta, el profe con IA funciona sin pegar ninguna clave (la pone el servidor). La clave propia es solo para pruebas.</p>
       {ai.groqKey ? (
         <>
           <p>

@@ -10,8 +10,11 @@ import { requestPersistence } from './persistence';
  * interfaz y el profe lo lean de forma síncrona; cada intento nuevo se escribe en segundo
  * plano. Si IndexedDB no está disponible, el progreso dura la sesión.
  */
+/** Intento guardado en el dispositivo; `syncedAt` = cuándo se subió a la cuenta (si hay). */
+export type StoredAttempt = Attempt & { syncedAt?: number };
+
 class ProgressDb extends Dexie {
-  attempts!: Table<Attempt, string>;
+  attempts!: Table<StoredAttempt, string>;
   constructor() {
     super('vocalcoach');
     this.version(1).stores({ attempts: '&id, itemId, day, at' });
@@ -19,7 +22,8 @@ class ProgressDb extends Dexie {
 }
 
 let db: ProgressDb | null = null;
-let attempts: Attempt[] = [];
+let attempts: StoredAttempt[] = [];
+const recordedListeners = new Set<() => void>();
 let ready = false;
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((l) => l());
@@ -69,7 +73,36 @@ export function recordAttempt(input: NewAttempt): Attempt[] {
   notify();
   void open()?.attempts.add(attempt).catch(() => undefined);
   void requestPersistence();
+  recordedListeners.forEach((l) => l());
   return previous;
+}
+
+/** Aviso tras cada intento nuevo (la sincronización con la cuenta se engancha aquí). */
+export function onAttemptRecorded(listener: () => void): () => void {
+  recordedListeners.add(listener);
+  return () => recordedListeners.delete(listener);
+}
+
+/** Intentos aún no subidos a la cuenta. */
+export const unsyncedAttempts = (): StoredAttempt[] => attempts.filter((a) => !a.syncedAt);
+
+export function markSynced(ids: readonly string[]): void {
+  const set = new Set(ids);
+  const now = Date.now();
+  attempts = attempts.map((a) => (set.has(a.id) ? { ...a, syncedAt: now } : a));
+  const changed = attempts.filter((a) => set.has(a.id));
+  void open()?.attempts.bulkPut(changed).catch(() => undefined);
+}
+
+/** Añade intentos hechos en otros dispositivos (los que ya están se ignoran). */
+export function mergeRemote(remote: readonly Attempt[]): number {
+  const known = new Set(attempts.map((a) => a.id));
+  const fresh = remote.filter((a) => !known.has(a.id)).map((a) => ({ ...a, syncedAt: Date.now() }));
+  if (fresh.length === 0) return 0;
+  attempts = [...attempts, ...fresh].sort((x, y) => x.at - y.at);
+  notify();
+  void open()?.attempts.bulkPut(fresh).catch(() => undefined);
+  return fresh.length;
 }
 
 /** Evaluaciones anteriores de un ejercicio (para el profe). */

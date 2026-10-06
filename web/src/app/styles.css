@@ -347,3 +347,8 @@ input.time { width: 5.5rem; border: 1px solid var(--line); background: var(--sur
 .ai-chat li.user { color: var(--muted); }
 .ai-ask, .ai-key { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .ai-ask input, .ai-key input { flex: 1; min-width: 200px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+
+/* Cuenta */
+.account-form { display: grid; gap: 0.6rem; max-width: 360px; }
+.account-form label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
+.account-form input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }

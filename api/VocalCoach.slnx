@@ -1,0 +1,42 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VocalCoach.Api/VocalCoach.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/VocalCoach.BuildingBlocks.Application/VocalCoach.BuildingBlocks.Application.csproj" />
+    <Project Path="src/BuildingBlocks/VocalCoach.BuildingBlocks.Infrastructure/VocalCoach.BuildingBlocks.Infrastructure.csproj" />
+    <Project Path="src/BuildingBlocks/VocalCoach.BuildingBlocks.Presentation/VocalCoach.BuildingBlocks.Presentation.csproj" />
+    <Project Path="src/BuildingBlocks/VocalCoach.SharedKernel/VocalCoach.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Coach/">
+    <Project Path="src/Modules/Coach/VocalCoach.Modules.Coach.Application/VocalCoach.Modules.Coach.Application.csproj" />
+    <Project Path="src/Modules/Coach/VocalCoach.Modules.Coach.Infrastructure/VocalCoach.Modules.Coach.Infrastructure.csproj" />
+    <Project Path="src/Modules/Coach/VocalCoach.Modules.Coach.Presentation/VocalCoach.Modules.Coach.Presentation.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="src/Modules/Identity/VocalCoach.Modules.Identity.Application/VocalCoach.Modules.Identity.Application.csproj" />
+    <Project Path="src/Modules/Identity/VocalCoach.Modules.Identity.Domain/VocalCoach.Modules.Identity.Domain.csproj" />
+    <Project Path="src/Modules/Identity/VocalCoach.Modules.Identity.Infrastructure/VocalCoach.Modules.Identity.Infrastructure.csproj" />
+    <Project Path="src/Modules/Identity/VocalCoach.Modules.Identity.IntegrationEvents/VocalCoach.Modules.Identity.IntegrationEvents.csproj" />
+    <Project Path="src/Modules/Identity/VocalCoach.Modules.Identity.Presentation/VocalCoach.Modules.Identity.Presentation.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Practice/">
+    <Project Path="src/Modules/Practice/VocalCoach.Modules.Practice.Application/VocalCoach.Modules.Practice.Application.csproj" />
+    <Project Path="src/Modules/Practice/VocalCoach.Modules.Practice.Domain/VocalCoach.Modules.Practice.Domain.csproj" />
+    <Project Path="src/Modules/Practice/VocalCoach.Modules.Practice.Infrastructure/VocalCoach.Modules.Practice.Infrastructure.csproj" />
+    <Project Path="src/Modules/Practice/VocalCoach.Modules.Practice.IntegrationEvents/VocalCoach.Modules.Practice.IntegrationEvents.csproj" />
+    <Project Path="src/Modules/Practice/VocalCoach.Modules.Practice.Presentation/VocalCoach.Modules.Practice.Presentation.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Progress/">
+    <Project Path="src/Modules/Progress/VocalCoach.Modules.Progress.Application/VocalCoach.Modules.Progress.Application.csproj" />
+    <Project Path="src/Modules/Progress/VocalCoach.Modules.Progress.Domain/VocalCoach.Modules.Progress.Domain.csproj" />
+    <Project Path="src/Modules/Progress/VocalCoach.Modules.Progress.Infrastructure/VocalCoach.Modules.Progress.Infrastructure.csproj" />
+    <Project Path="src/Modules/Progress/VocalCoach.Modules.Progress.Presentation/VocalCoach.Modules.Progress.Presentation.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VocalCoach.ArchitectureTests/VocalCoach.ArchitectureTests.csproj" />
+    <Project Path="tests/VocalCoach.IntegrationTests/VocalCoach.IntegrationTests.csproj" />
+    <Project Path="tests/VocalCoach.UnitTests/VocalCoach.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -7,6 +7,7 @@ import { SettingsPage } from '../features/settings/SettingsPage';
 import { TunerPage } from '../features/tuner/TunerPage';
 import { ProgressPage } from '../features/progress/ProgressPage';
 import { UpdateBanner, useOnline } from './pwa';
+import { startAutoSync } from '../shared/account';
 import { useEngineSnapshot } from '../features/tuner/useEngine';
 import { recordCalibration } from '../core/profile/vocal-profile';
 import { profileStore } from '../shared/profile-store';
@@ -22,6 +23,8 @@ export function App() {
   const online = useOnline();
 
   useEffect(() => void audioEngine.setInstrument(settings.instrument), [settings.instrument]);
+  // Cuenta opcional: sube y trae intentos en segundo plano.
+  useEffect(() => startAutoSync(), []);
 
   // Quien midió su voz antes de existir el perfil vocal: se usa esa medición como punto de partida.
   useEffect(() => {

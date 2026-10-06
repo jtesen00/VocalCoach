@@ -32,3 +32,7 @@
   - la regla "decae tras el ataque" mataba notas cantadas con ataque fuerte;
   - el bajo centrado ganaba a la voz.
 - **Basic Pitch no es un extractor de melodía:** detecta todas las notas (polifónico), así que como saliencia sigue al acompañamiento. Además, en CPU (sin WebGL) tarda ~1× tiempo real.
+- **.NET 10 y `dotnet test`:** con xunit v3 hay que usar Microsoft.Testing.Platform (`"test": { "runner": "Microsoft.Testing.Platform" }` en `global.json`). VSTest ya no está soportado.
+- **Dapper con PostgreSQL:** `DefaultTypeMap.MatchNamesWithUnderscores = true` para snake_case y un `TypeHandler<DateOnly>`. Para leer una columna `date` se usa `ReadAsync<DateOnly>()`, no `DateTime`.
+- **NetArchTest puede pasar en vacío** si no ve las dependencias: hay un test de control que exige que una dependencia conocida se detecte.
+- **Matar la API local:** `pkill -f VocalCoach.Api` también mata la propia shell (su línea de comandos lo contiene). Usar `fuser -k 5080/tcp`.

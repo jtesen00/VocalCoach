@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../VocalCoach.Modules.Progress.Domain/VocalCoach.Modules.Progress.Domain.csproj" />
+    <PackageReference Include="Dapper" />
+    <ProjectReference Include="../../../BuildingBlocks/VocalCoach.BuildingBlocks.Application/VocalCoach.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="../../Practice/VocalCoach.Modules.Practice.IntegrationEvents/VocalCoach.Modules.Practice.IntegrationEvents.csproj" />
+    <ProjectReference Include="../../Identity/VocalCoach.Modules.Identity.IntegrationEvents/VocalCoach.Modules.Identity.IntegrationEvents.csproj" />
+  </ItemGroup>
+</Project>

@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import { AiError, chat } from '../../ai/groq';
 import { teacherMessages, type AttemptSummary, type ChatMessage } from '../../core/ai/teacher-prompt';
 import { aiReady, aiSettingsStore } from '../../shared/ai-settings';
+import { accountStore, authed } from '../../shared/account';
+import { ApiError } from '../../api/client';
 import { useOnline } from '../../app/pwa';
 
 /**
@@ -11,13 +13,16 @@ import { useOnline } from '../../app/pwa';
  */
 export function AiTeacher({ summary }: { summary: AttemptSummary }) {
   const ai = aiSettingsStore.use();
+  const account = accountStore.use();
+  // Con clave propia (pruebas) se llama a Groq directamente; con cuenta, por el servidor (la clave no sale de él).
+  const mode = aiReady(ai) ? 'byok' : account.user ? 'server' : null;
   const [conversation, setConversation] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [question, setQuestion] = useState('');
   const abort = useRef<AbortController | null>(null);
   const online = useOnline();
-  if (!aiReady(ai)) return null;
+  if (!mode) return null;
   if (!online) return <p className="hint ai-teacher">El profe con IA necesita internet. Lo demás funciona sin conexión.</p>;
 
   const ask = async (extra: ChatMessage[]) => {
@@ -26,10 +31,14 @@ export function AiTeacher({ summary }: { summary: AttemptSummary }) {
     setBusy(true);
     setError(null);
     try {
-      const answer = await chat(ai.groqKey, ai.model!, teacherMessages(summary, extra), abort.current.signal);
+      const messages = teacherMessages(summary, extra);
+      const answer =
+        mode === 'byok'
+          ? await chat(ai.groqKey, ai.model!, messages, abort.current.signal)
+          : (await authed<{ content: string }>('/api/coach/teacher', { method: 'POST', body: JSON.stringify({ messages }), signal: abort.current.signal })).content;
       setConversation([...extra, { role: 'assistant', content: answer }]);
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') setError(e instanceof AiError ? e.message : 'No se pudo obtener respuesta.');
+      if ((e as Error).name !== 'AbortError') setError(e instanceof AiError || e instanceof ApiError ? e.message : 'No se pudo obtener respuesta.');
     } finally {
       setBusy(false);
     }

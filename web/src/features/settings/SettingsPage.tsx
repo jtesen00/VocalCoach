@@ -1,6 +1,7 @@
 import { audioEngine } from '../../audio/engine';
 import { INSTRUMENTS } from '../../audio/instruments';
 import { AiSettingsPanel } from './AiSettingsPanel';
+import { AccountPanel } from './AccountPanel';
 import { InstallSection } from '../../app/pwa';
 import { phraseChords } from '../../core/music/chords';
 import { noteName, solfegeName } from '../../core/music/notes';
@@ -111,6 +112,8 @@ export function SettingsPage({ settings, updateSettings, onMeasureVoice }: Props
         </p>
         <button onClick={onMeasureVoice}>{range ? 'Volver a medir mi voz' : 'Medir mi voz'}</button>
       </fieldset>
+
+      <AccountPanel />
 
       <fieldset>
         <legend>Instalar la app</legend>

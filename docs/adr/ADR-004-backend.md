@@ -38,6 +38,15 @@ api/
 
 Ejemplo de flujo: `POST /api/practice/attempts` → `RecordAttempt` (EF Core) → domain event `AttemptRecorded` → outbox → el módulo `Progress` consume `AttemptRecordedIntegrationEvent` → actualiza la racha y desbloquea el día si accuracy ≥ 80 %.
 
+## Implementación (Fase 6, 2026-10-06)
+Implementado en `api/` (ver `api/README.md`). Ajustes respecto a lo previsto:
+- **Domain events:** se despachan en `ModuleDbContext.SaveChangesAsync`, antes de guardar y en la misma transacción. Es equivalente al interceptor, pero explícito y fácil de seguir.
+- **Consultas Dapper dentro del slice** (`Application/Features/<Consulta>`), con `IDbConnectionFactory`. Así el caso de uso queda entero en una carpeta. Los comandos sí pasan por repositorios con EF Core en `Infrastructure`.
+- **Mediador propio:** `ICommandHandler`/`IQueryHandler` con decoradores de validación (FluentValidation) y registro. Sin librerías comerciales.
+- **Módulo Coach** (intermediario de IA): no tiene dominio ni base de datos. Solo tiene `Application`, `Infrastructure` y `Presentation`.
+- **Catalog** queda para cuando el catálogo deba editarse sin publicar la app. Hoy los ejercicios y canciones son datos del cliente.
+- **Bloque `BuildingBlocks.Presentation`:** traduce `Result` a ProblemDetails, para no repetirlo en cada módulo.
+
 ## Reglas verificadas por tests de arquitectura
 - `Domain` no depende de ningún otro proyecto ni de EF Core o ASP.NET.
 - `Application` no depende de `Infrastructure` ni de `Presentation`.

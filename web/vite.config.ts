@@ -6,6 +6,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 // Groq no garantiza CORS para llamadas desde el navegador: en desarrollo y en `vite preview`
 // se reenvían por el propio servidor local (/groq → api.groq.com). La clave la pone el usuario.
 const groqProxy = { '/groq': { target: 'https://api.groq.com', changeOrigin: true, rewrite: (p: string) => p.replace(/^\/groq/, '') } };
+// Backend .NET local (api/): `dotnet run --project src/VocalCoach.Api` escucha en el puerto 5080.
+const proxy = { ...groqProxy, '/api': { target: process.env.VOCALCOACH_API ?? 'http://localhost:5080', changeOrigin: true } };
 
 export default defineConfig({
   plugins: [
@@ -38,13 +40,13 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,mp3,json,md,webmanifest}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        navigateFallbackDenylist: [/^\/groq/],
+        navigateFallbackDenylist: [/^\/groq/, /^\/api\//],
         cleanupOutdatedCaches: true,
       },
     }),
   ],
-  server: { proxy: groqProxy },
-  preview: { proxy: groqProxy },
+  server: { proxy },
+  preview: { proxy },
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',

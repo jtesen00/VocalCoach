@@ -4,6 +4,26 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Añadido — Fase 6: backend .NET
+- **API en `api/`** (.NET 10):
+  - monolito modular con Clean Architecture y vertical slices;
+  - domain events e integration events por outbox;
+  - EF Core para comandos y Dapper para consultas;
+  - PostgreSQL con un esquema por módulo.
+- **Módulos:**
+  - Identity: cuentas, JWT y refresh tokens rotativos con detección de reutilización;
+  - Practice: intentos y sincronización idempotente;
+  - Progress: racha y mejores resultados, alimentado por la outbox;
+  - Coach: intermediario del profe con IA, con la clave en el servidor y límite por usuario.
+- **Web:**
+  - cuenta opcional en Ajustes;
+  - sincronización automática en ambos sentidos entre dispositivos;
+  - profe con IA por el servidor al iniciar sesión.
+- **Tests:**
+  - 42 en .NET: unitarios, de arquitectura con NetArchTest y de integración contra PostgreSQL real;
+  - E2E de la cuenta;
+  - CI `api.yml`.
+
 ### Añadido — Fase 7: PWA instalable y sin internet
 - **Service worker** (vite-plugin-pwa / Workbox): la app, los workers y los sonidos de la guía (≈ 3,6 MB) quedan guardados. Sin internet funciona todo menos el profe con IA.
 - **Instalar la app** desde Ajustes, o con instrucciones en iPhone/iPad. Manifiesto en español e iconos (incluido *maskable*).
