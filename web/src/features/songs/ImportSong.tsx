@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { importSongFromFile } from '../../audio/melody-import';
 import { allPhrases } from '../../core/songs/melody';
 import { addImportedSong, importedSongsStore, removeImportedSong } from '../../shared/imported-songs';
+import { isMelodyFile } from '../../core/songs/formats';
+import { importMelodyFile } from '../../shared/melody-file';
 
 /** "mm:ss" o segundos → segundos. */
 function parseTime(v: string): number | undefined {
@@ -23,10 +25,24 @@ export function ImportSong({ onOpen }: { onOpen: (id: string) => void }) {
   const [progress, setProgress] = useState<{ stage: 'decoding' | 'analyzing'; value: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const melodyFile = !!file && isMelodyFile(file.name);
+
   const run = async () => {
     if (!file) return;
     setError(null);
     try {
+      if (melodyFile) {
+        // Archivo de melodía (UltraStar, MIDI, MusicXML): la melodía es exacta y suele traer letra.
+        const song = await importMelodyFile(file);
+        if (!allPhrases(song).length) {
+          setError('El archivo no tiene notas que cantar.');
+          return;
+        }
+        addImportedSong(song);
+        setFile(null);
+        onOpen(song.id);
+        return;
+      }
       const { song } = await importSongFromFile(file, {
         fromS: parseTime(from),
         toS: parseTime(to),
@@ -41,7 +57,7 @@ export function ImportSong({ onOpen }: { onOpen: (id: string) => void }) {
       onOpen(song.id);
     } catch (e) {
       setError(e instanceof DOMException || (e as Error).name === 'EncodingError'
-        ? 'No se pudo leer el archivo. Prueba con MP3, M4A o WAV.'
+        ? 'No se pudo leer el archivo. Prueba con MP3, M4A o WAV, o con un archivo de melodía (UltraStar, MIDI o MusicXML).'
         : (e as Error).message);
     } finally {
       setProgress(null);
@@ -58,24 +74,25 @@ export function ImportSong({ onOpen }: { onOpen: (id: string) => void }) {
       <ul className="hint">
         <li>🔒 El audio se analiza en tu dispositivo: no se sube, no se guarda y la app no lo reproduce. Solo guardamos la melodía extraída, aquí.</li>
         <li>🎤 Funciona con la canción completa (voz + instrumentos). Mejor en estéreo y con la voz clara; con una pista solo de voz, mejor aún.</li>
+        <li>🎼 <strong>¿Tienes la melodía en un archivo?</strong> UltraStar (.txt), MIDI o karaoke (.mid, .kar) o partitura MusicXML (.musicxml, .mxl): la melodía sale exacta y, si el archivo trae letra, la verás sílaba a sílaba.</li>
       </ul>
 
       <label className="field file-field">
         Archivo
-        <input type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac,.aac" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <input type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac,.aac,.txt,.mid,.midi,.kar,.musicxml,.xml,.mxl" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
       </label>
-      <div className="target-row">
+      {!melodyFile && <div className="target-row">
         <label className="field">Desde <input className="time" placeholder="0:00" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Desde (minutos:segundos)" /></label>
         <label className="field">Hasta <input className="time" placeholder="final" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Hasta (minutos:segundos)" /></label>
         <span className="hint">Opcional: analiza solo el fragmento que quieres cantar.</span>
-      </div>
+      </div>}
       <label className="choice">
         <input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} />
-        <span>Uso este audio solo para mi práctica personal y educativa, y tengo derecho a usarlo así.</span>
+        <span>Uso este archivo solo para mi práctica personal y educativa, y tengo derecho a usarlo así.</span>
       </label>
       <p>
         <button className="primary" onClick={run} disabled={!file || !rights || !!progress}>
-          {progress ? (progress.stage === 'decoding' ? 'Leyendo el audio…' : `Analizando la melodía… ${Math.round(progress.value * 100)} %`) : 'Analizar melodía'}
+          {progress ? (progress.stage === 'decoding' ? 'Leyendo el audio…' : `Analizando la melodía… ${Math.round(progress.value * 100)} %`) : melodyFile ? 'Importar melodía' : 'Analizar melodía'}
         </button>
       </p>
       {progress && <progress max={1} value={progress.stage === 'decoding' ? undefined : progress.value} aria-label="Progreso del análisis" />}

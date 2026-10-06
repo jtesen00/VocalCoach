@@ -59,6 +59,7 @@ export class AudioEngine {
   private snapshotListeners = new Set<() => void>();
   private suppressUntil = 0;
   private guideNodes: AudioScheduledSourceNode[] = [];
+  private calibratedLatencyS: number | null = null;
   private instrument: InstrumentId = 'piano';
   private stats = { transport: 0, process: null as number | null, count: 0, windowStart: 0, fps: 0 };
   private snapshot: EngineSnapshot = { status: 'idle', error: null, referencePlaying: false, diagnostics: null };
@@ -149,8 +150,20 @@ export class AudioEngine {
   /** Retardo estimado entre el sonido y el `t` de los frames: media ventana + latencia de entrada. */
   latencyS(): number {
     const d = this.snapshot.diagnostics;
+    // Con calibración, el valor medido ya incluye entrada, salida y análisis.
+    if (this.calibratedLatencyS !== null) return this.calibratedLatencyS;
     if (!d) return 0;
     return (d.algorithmicLatencyMs + (d.inputLatencyMs ?? 0)) / 1000;
+  }
+
+  /** Programa clics (sin silenciar el micro) para medir el retraso. Devuelve sus instantes. */
+  calibrationClicks(count: number, intervalS: number): number[] {
+    const ctx = this.ctx;
+    if (!ctx) return [];
+    const first = ctx.currentTime + 0.5;
+    const times = Array.from({ length: count }, (_, i) => first + i * intervalS);
+    times.forEach((t) => scheduleClick(ctx, t, true));
+    return times;
   }
 
   /**
@@ -166,14 +179,35 @@ export class AudioEngine {
     return loadInstrument(id);
   }
 
-  playGuide(events: readonly GuideEvent[], chords?: readonly TimedChord[]): { startT: number; endT: number; done: Promise<void> } {
+  /**
+   * Toca la guía. Por defecto el micro se ignora mientras suena (llamada y respuesta).
+   * Con `listen` (karaoke con auriculares) se sigue escuchando: el usuario canta a la vez.
+   * `startDelayS` deja margen antes de empezar (p. ej. para una cuenta atrás).
+   */
+  playGuide(
+    events: readonly GuideEvent[],
+    chords?: readonly TimedChord[],
+    options: { listen?: boolean; startDelayS?: number; melodyGain?: number } = {},
+  ): { startT: number; endT: number; done: Promise<void> } {
     const ctx = this.ctx;
     if (!ctx) return { startT: 0, endT: 0, done: Promise.resolve() };
-    const startT = ctx.currentTime + 0.08;
+    const startT = ctx.currentTime + 0.08 + (options.startDelayS ?? 0);
     this.guideNodes = this.guideNodes.filter((n) => n.context === ctx);
-    const endT = playMelody(ctx, this.instrument, events, startT, this.guideNodes);
+    const endT = options.melodyGain === 0 ? startT + events.reduce((a, e) => a + e.durationS, 0) : playMelody(ctx, this.instrument, events, startT, this.guideNodes);
     if (chords?.length) playChords(ctx, this.instrument, chords, startT, this.guideNodes);
+    if (options.listen) {
+      const done = new Promise<void>((resolve) => {
+        const check = () => (this.ctx !== ctx || ctx.currentTime >= endT ? resolve() : setTimeout(check, 100));
+        check();
+      });
+      return { startT, endT, done };
+    }
     return { startT, endT, done: this.suppressUntilTime(endT + REFERENCE_TAIL_S) };
+  }
+
+  /** Retraso medido con la calibración (salida + entrada), que se suma al del navegador. */
+  setCalibratedLatency(seconds: number): void {
+    this.calibratedLatencyS = Math.max(0, Math.min(1, seconds));
   }
 
   /** Corta la guía que esté sonando (p. ej. al escuchar una melodía larga). */

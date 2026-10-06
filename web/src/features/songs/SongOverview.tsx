@@ -23,6 +23,8 @@ interface Props {
   onTrain: (index: number) => void;
   onMeasure: () => void;
   onBack: () => void;
+  /** Cantar la canción entera de corrido (modo karaoke). */
+  onKaraoke: () => void;
 }
 
 const ICON = (score: number) => (score >= 80 ? '✓' : score >= 60 ? '⚠' : '✗');
@@ -32,7 +34,7 @@ function amountWord(t: number): string {
   return a <= 2 ? 'un poco' : a <= 5 ? '' : 'bastante';
 }
 
-export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onBack }: Props) {
+export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onBack, onKaraoke }: Props) {
   const profile = profileStore.use();
   const all = songStore.use();
   const progress = all[song.id] ?? { transpose: null, byKey: {} };
@@ -91,7 +93,14 @@ export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onB
           {!song.extraction.stereo && ' El archivo es mono: con estéreo se separa mejor la voz de los instrumentos.'}
         </p>
       )}
+      {song.source && (
+        <p className="notice quality-buena">
+          <strong>Melodía exacta del archivo.</strong>
+          {song.source.warnings.length > 0 && ` ${song.source.warnings.join(' ')}`}
+        </p>
+      )}
       <p className="version-buttons">
+        <button className="primary" onClick={onKaraoke}>🎤 Cantar la canción entera</button>
         <ListenButton events={wholeMelody} label="▶ Escuchar toda la melodía" />
         {imported && <span className="hint">Cada frase indica en qué minuto empieza en la canción original, para que la compares.</span>}
       </p>
@@ -180,7 +189,7 @@ export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onB
                   <span className="phrase-num">Frase {p.index + 1}</span>
                   <span className="phrase-lyrics">
                     <MelodyShape plan={phrasePlan(p, transpose)} />
-                    {imported ? `${p.phrase.lyrics} · ${p.phrase.notes.length} notas` : p.phrase.lyrics}
+                    {imported && !song.source ? `${p.phrase.lyrics} · ${p.phrase.notes.length} notas` : p.phrase.lyrics}
                   </span>
                   <ListenButton className="small" events={() => phraseSound(p)} label="▶" playingLabel="■" />
                   <span className={`phrase-last ${r ? (r.last >= 80 ? 'pass' : r.last >= 60 ? 'fair' : 'fail') : ''}`}>

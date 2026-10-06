@@ -23,6 +23,9 @@ export function App() {
   const online = useOnline();
 
   useEffect(() => void audioEngine.setInstrument(settings.instrument), [settings.instrument]);
+  useEffect(() => {
+    if (settings.latencyMs !== null) audioEngine.setCalibratedLatency(settings.latencyMs / 1000);
+  }, [settings.latencyMs]);
   // Cuenta opcional: sube y trae intentos en segundo plano.
   useEffect(() => startAutoSync(), []);
 

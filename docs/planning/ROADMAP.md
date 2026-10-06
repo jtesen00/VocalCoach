@@ -12,7 +12,7 @@ Orden conceptual del spec: pitch → visualización → scoring → ejercicios �
 | 7 | PWA: instalación, offline, `storage.persist()` (se adelanta al backend) ([detalle](fase-07-pwa.md)) | ✅ Implementado (en `dev`) · ⏳ falta probar en móviles reales | Se instala y se practica sin conexión en Android y iPhone |
 | 6 | Backend .NET (ADR-004): cuentas, sync de intentos, progreso por outbox e intermediario de IA ([detalle](fase-06-backend.md)) | ✅ Implementado (en `dev`) · ⏳ falta desplegar | Un intento hecho en un dispositivo aparece en otro con la misma cuenta |
 | **8a** | **Entrenamiento por canción** (adelantada por ser el diferenciador): perfil vocal dinámico, tono recomendado, dificultad personal, frases, entrenamiento generado e importación local desde MP3 ([detalle](fase-08a-canciones.md), ADR-010) | ✅ Implementado (en `dev`) · ⏳ falta validar con alumnos | El bucle completo produce mejora medible en la frase entrenada |
-| 8b | Importar canción + archivo de melodía (UltraStar/MIDI/MusicXML), modo libre (ADR-009) | Pendiente | Puntuación estable entre repeticiones |
+| 8b | Archivos de melodía (UltraStar/MIDI/MusicXML) y canción entera tipo karaoke, con guía o con el original fuera de la app, y calibración de sincronía (ADR-009, [detalle](fase-08b-melodia-y-karaoke.md)) | ✅ Implementado (en `dev`) · ⏳ falta medir estabilidad con grabaciones reales | Puntuación estable entre repeticiones |
 | 8c | Separación de voz para extraer la melodía de mezclas completas (servidor o WebGPU) | Pendiente | Melodía utilizable sin edición en ≥ 70 % de canciones de prueba |
 | 9 | Demostraciones cantadas con IA (ADR-008) | Pendiente | |
 

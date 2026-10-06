@@ -15,6 +15,8 @@ export interface Settings {
   instrument: InstrumentId;
   /** Acompañamiento con acordes en las canciones. */
   accompaniment: boolean;
+  /** Retraso medido con la calibración (ms), o null si no se ha medido. */
+  latencyMs: number | null;
 }
 
 const DEFAULTS: Settings = {
@@ -25,6 +27,7 @@ const DEFAULTS: Settings = {
   showDetails: false,
   instrument: 'piano',
   accompaniment: true,
+  latencyMs: null,
 };
 const KEY = 'vocalcoach.settings.v1';
 

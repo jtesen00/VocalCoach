@@ -20,7 +20,8 @@ _Última actualización: 2026-10-06 · versión 0.2.0 + interfaz sencilla + Fase
 - Profe con IA experimental (Groq, clave del usuario en su navegador; solo texto agregado). En producción hará falta un intermediario.
 - Fase 7: PWA instalable y sin internet (service worker, manifiesto, aviso de actualización, `storage.persist()`).
 - Fase 6: backend .NET en `api/` (Identity, Practice, Progress, Coach), cuenta opcional y sincronización entre dispositivos en la web, y profe con IA por el servidor.
-- Web: 221 tests unitarios y 21 E2E. API: 42 tests. Dos workflows de CI (`web.yml` y `api.yml`).
+- Fase 8b: archivos de melodía (UltraStar, MIDI/.kar, MusicXML/.mxl) con letra, canción entera tipo karaoke (con guía o con el original fuera de la app) y calibración de sincronía.
+- Web: 242 tests unitarios y 23 E2E. API: 42 tests. Dos workflows de CI (`web.yml` y `api.yml`).
 
 ## Siguiente
 1. Medir en dispositivos reales (checklist en `docs/benchmarks/README.md`).
@@ -28,7 +29,7 @@ _Última actualización: 2026-10-06 · versión 0.2.0 + interfaz sencilla + Fase
 3. Revisar los textos del profesor con un profesor de canto y validar con alumnos el bucle de canciones.
 3b. Probar la importación con MP3 reales del usuario (la mezcla realista es simulada) y ajustar umbrales; el caso más débil es la voz grave (80 %); después, editar frases o letra y separación de voz (8c).
 4. Validar con usuarios el camino de 10 días (duración y contenido) y probar la instalación de la PWA en Android y iPhone reales.
-5. Desplegar la API y la web (decidir proveedor) y configurar `VITE_API_URL`; después, las fases 8b (UltraStar/MIDI) y 8c (separación de voz).
+5. Desplegar la API y la web (decidir proveedor) y configurar `VITE_API_URL`; después, la fase 8c (separación de voz) y la 9 (demostraciones cantadas con IA).
 
 ## Preguntas abiertas
 - IA: probado el caso A (profe conversacional) con Groq y clave en el navegador. ¿Siguiente: Gemini como alternativa, letra para canciones importadas (B) o el intermediario para producción?

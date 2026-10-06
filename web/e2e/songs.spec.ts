@@ -55,7 +55,7 @@ test('importar un audio: se extrae la melodía y se puede practicar', async ({ p
   await page.locator('input[type=file]').setInputFiles(resolve(import.meta.dirname, '.fixtures/melodia-prueba.wav'));
   const analyze = page.getByRole('button', { name: 'Analizar melodía' });
   await expect(analyze).toBeDisabled(); // falta aceptar el uso personal
-  await page.getByLabel(/Uso este audio solo para mi práctica personal/).check();
+  await page.getByLabel(/Uso este archivo solo para mi práctica personal/).check();
   await analyze.click();
 
   await expect(page.getByRole('heading', { name: 'melodia prueba' })).toBeVisible({ timeout: 20_000 });
@@ -74,7 +74,7 @@ test('importar un audio: se extrae la melodía y se puede practicar', async ({ p
 test('importar una canción completa (voz + instrumentos, estéreo): frases correctas y se pueden escuchar', async ({ page }) => {
   await openSongs(page);
   await page.locator('input[type=file]').setInputFiles(resolve(import.meta.dirname, '.fixtures/cancion-completa.wav'));
-  await page.getByLabel(/Uso este audio solo para mi práctica personal/).check();
+  await page.getByLabel(/Uso este archivo solo para mi práctica personal/).check();
   await page.getByRole('button', { name: 'Analizar melodía' }).click();
 
   await expect(page.getByRole('heading', { name: 'cancion completa' })).toBeVisible({ timeout: 30_000 });

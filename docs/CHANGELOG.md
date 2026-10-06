@@ -4,6 +4,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Añadido — Fase 8b: archivos de melodía y canción entera
+- **Importar UltraStar (.txt), MIDI/karaoke (.mid, .kar) y MusicXML (.musicxml, .xml, .mxl):** la melodía sale exacta, con la letra sílaba a sílaba y las frases según las líneas del archivo.
+- **🎤 Cantar la canción entera** con la guía de la app (con o sin melodía, y con acordes) o con la canción original puesta fuera de la app. En los dos casos:
+  - letra resaltada y avance de la línea siguiente;
+  - tu voz sobre la melodía;
+  - puntuación por frase y resumen final;
+  - auriculares obligatorios.
+- **Sincronía** (Ajustes): calibración del retraso real del dispositivo con clics.
+- Tests: unitarios de los tres formatos, del `.mxl`, de la línea de tiempo y de la latencia; E2E de importación y karaoke.
+
 ### Añadido — Fase 6: backend .NET
 - **API en `api/`** (.NET 10):
   - monolito modular con Clean Architecture y vertical slices;

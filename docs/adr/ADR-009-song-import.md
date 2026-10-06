@@ -8,6 +8,16 @@ Los usuarios quieren cargar las canciones que les gustan y ver en tiempo real si
 ## Revisión (petición del equipo)
 Se adelanta un **nivel C local**: el usuario carga un MP3/M4A/WAV de cualquier canción, y la app extrae en el dispositivo cómo se canta la melodía (`core/songs/transcribe.ts`). La melodía se practica en la app y después el usuario canta con el original por su cuenta (por ejemplo en YouTube). El audio no se sube, no se guarda y la app no lo reproduce. Detalles y limitaciones en [la investigación de fuentes de melodía](../research/fuentes-de-melodia.md). La separación de voz con IA, para mejorar el resultado con la mezcla completa, sigue siendo el siguiente paso (8c).
 
+## Implementación de la 8b (2026-10-06)
+- Se importan **UltraStar, MIDI/.kar y MusicXML/.mxl** en el dispositivo. La melodía es exacta y trae letra.
+- **No se reproduce el audio original** (decisión del equipo). Por eso el "modo karaoke" es:
+  - **con la guía de la app** (melodía e instrumentos propios), o
+  - **con el original fuera de la app**, sincronizado al pulsar «Empezar» y con ajuste fino.
+
+  Se exigen auriculares en ambos casos.
+- La calibración de latencia mide el retraso real (salida + entrada) con clics. Para la octava se usa "cualquier octava" al cantar con el original.
+- El "modo libre" sin melodía ya existe como **Canta libre**. Sin reproducir el original, no aporta más.
+
 ## Decisión original
 1. **Fase 8b, local:** importar **audio (MP3/M4A/WAV) + melodía (UltraStar `.txt` o MIDI; MusicXML más adelante)**. Todo se procesa y guarda en el dispositivo (IndexedDB/OPFS). Sin melodía hay **modo libre**: trayectoria del usuario sobre la música, sin puntuación.
 2. **Fase 8c, opcional:** extracción automática de la melodía desde el audio (separación de voz tipo Demucs + pitch tracking + alineación opcional de la letra) como **trabajo en servidor** (cola en Postgres + GPU serverless). Solo con consentimiento explícito: el audio se borra tras procesarse y solo se conserva la melodía derivada, privada para el usuario. Se evaluará hacerlo en el navegador con WebGPU.
