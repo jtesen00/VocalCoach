@@ -28,3 +28,4 @@ Antes de empezar, actualizar la rama de trabajo con `main`. Al terminar, PR haci
 - **Sin firma de Claude:** los commits no llevan `Co-Authored-By` ni enlaces de sesión, y los PRs no llevan pie de "Generated with Claude Code". El autor de git es el del repositorio (`git config user.name/user.email` local).
 - Cada cambio relevante actualiza `docs/CHANGELOG.md` y `docs/memory/status.md`; las decisiones nuevas van a `docs/memory/decisions.md` (y a un ADR si son de arquitectura).
 - Commits con mensaje descriptivo en español: `tipo(ámbito): resumen`.
+- **Claves de IA:** nunca en el código, el repositorio, `.env` versionado ni variables `VITE_*`. Para pruebas, el usuario las pega en Ajustes y se guardan en su navegador; en producción, en un intermediario. A la IA solo se envía texto agregado (sin audio).

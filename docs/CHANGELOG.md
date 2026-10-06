@@ -4,6 +4,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Añadido — Profe con IA (experimental, Groq)
+- **Ajustes → Profe con IA:** pegas tu clave de Groq; se comprueba y se elige el mejor modelo disponible. La clave se guarda solo en tu navegador, para pruebas.
+- Tras cada ejercicio, **«💬 Explícamelo (IA)»**: la IA explica el resultado con sus palabras, siguiendo el diagnóstico del profe, y puedes hacerle preguntas.
+- Solo se envía un resumen en texto del intento (nunca audio). En `pnpm dev` y `vite preview`, las llamadas pasan por el servidor local para evitar el bloqueo CORS.
+- Tests: unitarios del prompt y E2E con la API de Groq simulada.
+
 ### Añadido — Fase 5: progreso local
 - **Historial de intentos en IndexedDB** (Dexie):
   - un registro inmutable por intento, con UUID del cliente y solo agregados;

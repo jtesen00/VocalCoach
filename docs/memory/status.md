@@ -17,7 +17,8 @@ _Última actualización: 2026-10-06 · versión 0.2.0 + interfaz sencilla + Fase
 - Guía con **instrumentos grabados** (piano Salamander, voz, silbido, flauta y cuerdas), afinados nota a nota y tocados ligados. Mezcla con reverb y compresor. Si no cargan, suena el sintetizado.
 - Extracción de MP3 medida con una **mezcla realista** de instrumentos grabados: 80–97 % de notas correctas (antes 37–85 %).
 - Fase 5: progreso local en IndexedDB (Dexie), camino de 10 días, racha, pestaña Progreso y mejor resultado por ejercicio.
-- 217 tests unitarios, 17 E2E y CI.
+- Profe con IA experimental (Groq, clave del usuario en su navegador; solo texto agregado). En producción hará falta un intermediario.
+- 221 tests unitarios, 19 E2E y CI.
 
 ## Siguiente
 1. Medir en dispositivos reales (checklist en `docs/benchmarks/README.md`).
@@ -27,7 +28,7 @@ _Última actualización: 2026-10-06 · versión 0.2.0 + interfaz sencilla + Fase
 4. Validar con usuarios el camino de 10 días (duración y contenido). Siguiente fase según el roadmap: 7 (PWA, offline y `storage.persist()`).
 
 ## Preguntas abiertas
-- IA: ¿primer caso de uso (profe conversacional o letra para importadas)? ¿Clave en el navegador (solo pruebas) o proxy? Ver `docs/research/ia-proveedores.md`.
+- IA: probado el caso A (profe conversacional) con Groq y clave en el navegador. ¿Siguiente: Gemini como alternativa, letra para canciones importadas (B) o el intermediario para producción?
 - ¿Confirmar que Dapper se quiere para las consultas del backend? Se interpretó que sí.
 - ¿Te encaja el camino de 10 días propuesto (`core/progress/path.ts`)?
 

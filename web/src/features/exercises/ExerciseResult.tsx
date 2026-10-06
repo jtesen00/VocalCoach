@@ -2,6 +2,8 @@ import type { ExerciseEvaluation } from '../../core/exercises/evaluate';
 import type { TeacherAdvice } from '../../core/teacher/teacher';
 import { displayNote, NOTE_RESULT, stars } from '../../shared/labels';
 import { TeacherCard, type NextStepActions } from '../teacher/TeacherCard';
+import { AiTeacher } from '../teacher/AiTeacher';
+import type { AttemptSummary } from '../../core/ai/teacher-prompt';
 
 const cents = (c: number | null) => (c === null ? '—' : `${c >= 0 ? '+' : '−'}${Math.abs(Math.round(c))} c`);
 const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)} %`);
@@ -11,9 +13,11 @@ interface Props {
   advice: TeacherAdvice;
   actions: NextStepActions;
   detailed: boolean;
+  /** Resumen para el profe con IA (si está configurado en Ajustes). */
+  aiSummary?: AttemptSummary;
 }
 
-export function ExerciseResult({ evaluation: e, advice, actions, detailed }: Props) {
+export function ExerciseResult({ evaluation: e, advice, actions, detailed, aiSummary }: Props) {
   const n = stars(e.score, e.passed);
   return (
     <div className="result" aria-live="polite">
@@ -33,6 +37,7 @@ export function ExerciseResult({ evaluation: e, advice, actions, detailed }: Pro
       </div>
 
       <TeacherCard advice={advice} actions={actions} />
+      {aiSummary && <AiTeacher key={JSON.stringify(aiSummary)} summary={aiSummary} />}
 
       {e.notes.length > 1 && !detailed && (
         <ol className="note-chips" aria-label="Resultado de cada nota">

@@ -1,5 +1,6 @@
 import { audioEngine } from '../../audio/engine';
 import { INSTRUMENTS } from '../../audio/instruments';
+import { AiSettingsPanel } from './AiSettingsPanel';
 import { phraseChords } from '../../core/music/chords';
 import { noteName, solfegeName } from '../../core/music/notes';
 import { TOLERANCE_BY_LEVEL, type SkillLevel } from '../../core/scoring/pitch-scoring';
@@ -109,6 +110,8 @@ export function SettingsPage({ settings, updateSettings, onMeasureVoice }: Props
         </p>
         <button onClick={onMeasureVoice}>{range ? 'Volver a medir mi voz' : 'Medir mi voz'}</button>
       </fieldset>
+
+      <AiSettingsPanel detailed={settings.showDetails} />
 
       <fieldset>
         <legend>Para curiosos</legend>

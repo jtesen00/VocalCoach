@@ -13,6 +13,7 @@ import type { Song } from '../../core/songs/types';
 import { useAttempts } from '../../shared/progress-store';
 import { practiceTranspose, setSongVersion } from '../../shared/song-store';
 import { PathCard } from '../progress/PathCard';
+import { summarizeAttempt } from '../../core/ai/teacher-prompt';
 import { PhrasePractice } from '../songs/PhrasePractice';
 import { Stars } from '../songs/Stars';
 import type { Settings } from '../../shared/settings';
@@ -224,7 +225,7 @@ export function ExerciseRunner({ def, settings, updateSettings, onSelect, onBack
       </div>
 
       {state.phase === 'result' && state.evaluation && advice && (
-        <ExerciseResult evaluation={state.evaluation} advice={advice} actions={actions} detailed={tech} />
+        <ExerciseResult evaluation={state.evaluation} advice={advice} actions={actions} detailed={tech} aiSummary={summarizeAttempt(plan, state.evaluation, advice, state.previous, settings.level)} />
       )}
     </section>
   );

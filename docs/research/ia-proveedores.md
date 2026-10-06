@@ -53,3 +53,18 @@ La detección de pitch, la evaluación, el profesor, las recomendaciones de tono
 - Mistral: [plan gratuito 2026 (AgentDeals)](https://agentdeals.dev/vendor/mistral-ai)
 - Cloudflare: [precios de Workers AI](https://developers.cloudflare.com/workers-ai/platform/pricing/)
 - Hugging Face: [crédito gratuito de Inference API (Klymentiev)](https://klymentiev.com/blog/huggingface-inference-api)
+
+## Implementado: profe con IA (caso A, experimental)
+
+- **Proveedor:** Groq, detrás de un adaptador (`web/src/ai/groq.ts`). Al conectar se elige el primer modelo disponible de una lista, porque Groq rota su catálogo:
+  1. `openai/gpt-oss-120b`
+  2. `llama-3.3-70b-versatile`
+  3. `qwen/qwen3-32b`
+  4. …
+- **Clave:** la pega el usuario en **Ajustes → Profe con IA** y se guarda solo en su navegador (`localStorage`, `vocalcoach.ai.v1`). No está en el código, ni en variables `VITE_*`, ni en el repositorio. Es para pruebas.
+- **CORS:** Groq no garantiza aceptar llamadas directas desde el navegador. Por eso, en `pnpm dev` y `vite preview` las llamadas pasan por el servidor local (`/groq` → `api.groq.com`). En producción hará falta un intermediario (backend .NET o Worker) que guarde la clave.
+- **Datos enviados:** solo texto con un resumen agregado del intento (`core/ai/teacher-prompt.ts`): ejercicio, resultado, cómo salió cada nota en do-re-mi, puntuaciones anteriores y el consejo de la app. Nunca audio ni frames.
+- **Comportamiento:** la IA explica el diagnóstico del profe por reglas (no lo sustituye), habla de lo que se oye y no diagnostica el cuerpo. El usuario puede hacer preguntas de seguimiento.
+- **Tests:**
+  - unitarios del resumen y del prompt;
+  - E2E con la API simulada (conectar, explicar, preguntar, clave inválida).
