@@ -6,6 +6,7 @@ import { SongsPage } from '../features/songs/SongsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { TunerPage } from '../features/tuner/TunerPage';
 import { ProgressPage } from '../features/progress/ProgressPage';
+import { UpdateBanner, useOnline } from './pwa';
 import { useEngineSnapshot } from '../features/tuner/useEngine';
 import { recordCalibration } from '../core/profile/vocal-profile';
 import { profileStore } from '../shared/profile-store';
@@ -18,6 +19,7 @@ export function App() {
   const [view, setView] = useState<View>(settings.range ? 'exercises' : 'range');
   const snapshot = useEngineSnapshot();
   const running = snapshot.status === 'running';
+  const online = useOnline();
 
   useEffect(() => void audioEngine.setInstrument(settings.instrument), [settings.instrument]);
 
@@ -58,6 +60,8 @@ export function App() {
         </div>
       </header>
 
+      <UpdateBanner />
+      {!online && <p className="notice" role="status">Sin conexión: puedes practicar igual; solo el profe con IA necesita internet.</p>}
       {running && snapshot.diagnostics?.bluetooth.suspected && (
         <p className="notice warn" role="alert">
           Parece que usas auriculares o un micrófono Bluetooth. Con Bluetooth la voz llega con retraso y peor calidad, y las correcciones

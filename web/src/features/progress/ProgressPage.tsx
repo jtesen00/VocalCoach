@@ -4,6 +4,7 @@ import { localDay, summarize } from '../../core/progress/progress';
 import { stars } from '../../shared/labels';
 import { clearProgress, useAttempts } from '../../shared/progress-store';
 import type { Settings } from '../../shared/settings';
+import { usePersisted } from '../../shared/persistence';
 import { Stars } from '../songs/Stars';
 import { stepTitle } from './PathCard';
 
@@ -13,6 +14,7 @@ const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 export function ProgressPage({ settings }: { settings: Settings }) {
   const { attempts, ready } = useAttempts();
   const [confirm, setConfirm] = useState(false);
+  const persisted = usePersisted();
   if (!ready) return <p className="hint">Cargando tu progreso…</p>;
   const today = localDay(Date.now());
   const s = summarize(attempts, today);
@@ -87,7 +89,11 @@ export function ProgressPage({ settings }: { settings: Settings }) {
         <p className="hint">{s.attempts} intentos · {s.passed} superados ({Math.round((100 * s.passed) / s.attempts)} %).</p>
       )}
 
-      <p className="hint">Tu progreso se guarda solo en este dispositivo.</p>
+      <p className="hint">
+        Tu progreso se guarda solo en este dispositivo.
+        {persisted === true && ' 🔒 Protegido: el navegador no lo borrará aunque falte espacio.'}
+        {persisted === false && ' Instala la app (Ajustes) para que el navegador no lo borre si le falta espacio.'}
+      </p>
       {!confirm ? (
         <button className="link" onClick={() => setConfirm(true)}>Borrar mi progreso</button>
       ) : (

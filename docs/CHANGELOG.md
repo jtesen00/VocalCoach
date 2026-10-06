@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Añadido — Fase 7: PWA instalable y sin internet
+- **Service worker** (vite-plugin-pwa / Workbox): la app, los workers y los sonidos de la guía (≈ 3,6 MB) quedan guardados. Sin internet funciona todo menos el profe con IA.
+- **Instalar la app** desde Ajustes, o con instrucciones en iPhone/iPad. Manifiesto en español e iconos (incluido *maskable*).
+- **Aviso de versión nueva** con «Actualizar / Más tarde»: nunca se recarga a mitad de un ejercicio.
+- **Aviso sin conexión** en la cabecera.
+- **Almacenamiento persistente:** se pide al guardar el primer intento. En Progreso se indica si tus datos están protegidos.
+- E2E sobre la versión compilada: manifiesto, service worker y ejercicio superado sin conexión.
+
 ### Añadido — Profe con IA (experimental, Groq)
 - **Ajustes → Profe con IA:** pegas tu clave de Groq; se comprueba y se elige el mejor modelo disponible. La clave se guarda solo en tu navegador, para pruebas.
 - Tras cada ejercicio, **«💬 Explícamelo (IA)»**: la IA explica el resultado con sus palabras, siguiendo el diagnóstico del profe, y puedes hacerle preguntas.

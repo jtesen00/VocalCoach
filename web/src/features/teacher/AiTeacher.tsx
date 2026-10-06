@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { AiError, chat } from '../../ai/groq';
 import { teacherMessages, type AttemptSummary, type ChatMessage } from '../../core/ai/teacher-prompt';
 import { aiReady, aiSettingsStore } from '../../shared/ai-settings';
+import { useOnline } from '../../app/pwa';
 
 /**
  * "Pregúntale al profe (IA)": explica el intento con otras palabras y responde dudas.
@@ -15,7 +16,9 @@ export function AiTeacher({ summary }: { summary: AttemptSummary }) {
   const [error, setError] = useState<string | null>(null);
   const [question, setQuestion] = useState('');
   const abort = useRef<AbortController | null>(null);
+  const online = useOnline();
   if (!aiReady(ai)) return null;
+  if (!online) return <p className="hint ai-teacher">El profe con IA necesita internet. Lo demás funciona sin conexión.</p>;
 
   const ask = async (extra: ChatMessage[]) => {
     abort.current?.abort();

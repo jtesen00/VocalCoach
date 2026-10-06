@@ -18,14 +18,16 @@ _Última actualización: 2026-10-06 · versión 0.2.0 + interfaz sencilla + Fase
 - Extracción de MP3 medida con una **mezcla realista** de instrumentos grabados: 80–97 % de notas correctas (antes 37–85 %).
 - Fase 5: progreso local en IndexedDB (Dexie), camino de 10 días, racha, pestaña Progreso y mejor resultado por ejercicio.
 - Profe con IA experimental (Groq, clave del usuario en su navegador; solo texto agregado). En producción hará falta un intermediario.
-- 221 tests unitarios, 19 E2E y CI.
+- Fase 7: PWA instalable y sin internet (service worker, manifiesto, aviso de actualización, `storage.persist()`).
+- 221 tests unitarios, 20 E2E y CI.
 
 ## Siguiente
 1. Medir en dispositivos reales (checklist en `docs/benchmarks/README.md`).
 2. Grabar intentos reales con consentimiento; validar el detector y el scoring frente al juicio de un profesor; ajustar umbrales.
 3. Revisar los textos del profesor con un profesor de canto y validar con alumnos el bucle de canciones.
 3b. Probar la importación con MP3 reales del usuario (la mezcla realista es simulada) y ajustar umbrales; el caso más débil es la voz grave (80 %); después, editar frases o letra y separación de voz (8c).
-4. Validar con usuarios el camino de 10 días (duración y contenido). Siguiente fase según el roadmap: 7 (PWA, offline y `storage.persist()`).
+4. Validar con usuarios el camino de 10 días (duración y contenido) y probar la instalación de la PWA en Android y iPhone reales.
+5. Siguiente fase según el roadmap: 6 (backend .NET: usuarios, sincronización de intentos y catálogo; también el intermediario de IA para producción).
 
 ## Preguntas abiertas
 - IA: probado el caso A (profe conversacional) con Groq y clave en el navegador. ¿Siguiente: Gemini como alternativa, letra para canciones importadas (B) o el intermediario para producción?

@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import { useSyncExternalStore } from 'react';
 import type { ExerciseEvaluation } from '../core/exercises/evaluate';
 import { localDay, type Attempt, type AttemptKind } from '../core/progress/progress';
+import { requestPersistence } from './persistence';
 
 /**
  * Historial de intentos en IndexedDB (Dexie). Se carga entero en memoria al abrir la app
@@ -67,6 +68,7 @@ export function recordAttempt(input: NewAttempt): Attempt[] {
   attempts = [...attempts, attempt];
   notify();
   void open()?.attempts.add(attempt).catch(() => undefined);
+  void requestPersistence();
   return previous;
 }
 

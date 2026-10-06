@@ -21,5 +21,9 @@ export default defineConfig({
       ],
     },
   },
-  webServer: { command: 'pnpm exec vite --port 5173 --strictPort', url: 'http://localhost:5173', reuseExistingServer: true },
+  webServer: [
+    { command: 'pnpm exec vite --port 5173 --strictPort', url: 'http://localhost:5173', reuseExistingServer: true },
+    // Versión compilada con service worker (PWA): solo la usa e2e/pwa.spec.ts.
+    { command: 'pnpm exec vite build && pnpm exec vite preview --port 4173 --strictPort', url: 'http://localhost:4173', reuseExistingServer: true, timeout: 120_000 },
+  ],
 });
