@@ -5,13 +5,16 @@ import { FFT } from '../pitch/fft';
  * Extracción de la melodía principal de música polifónica (estilo Melodia, Salamon y Gómez, 2012),
  * en TS puro para ejecutarse en un Web Worker:
  *
- *  1. STFT estéreo y aislamiento del centro: la voz principal suele estar centrada.
+ *  1. STFT estéreo y realce del centro: la voz principal suele estar centrada (se conserva
+ *     un 30 % del resto: con reverb, la voz real no está perfectamente en el centro).
  *  2. Picos espectrales con interpolación parabólica.
  *  3. Saliencia por suma armónica (bins de 10 cents, 55 Hz–1,76 kHz).
  *  4. Contornos de altura: continuidad en el tiempo (≤ 80 c, huecos ≤ 100 ms).
- *  5. Filtro de voz/no voz por saliencia; los contornos con vibrato se conservan.
+ *  5. Voz/no voz: fuera lo que se apaga como un piano o un bajo (la voz se sostiene), lo poco
+ *     saliente y lo que queda muy por debajo del registro de la melodía (el bajo).
  *  6. Errores de octava y valores atípicos respecto a la altura media de la melodía.
- *  7. En cada instante, el contorno más saliente (con prioridad para el vibrato).
+ *  7. En cada instante, el contorno más saliente (con prioridad para el vibrato y para la
+ *     voz superior frente a acompañamientos más graves).
  */
 
 export const EXTRACTION_SAMPLE_RATE = 22050;
@@ -41,9 +44,12 @@ export interface MelodyFrame {
 export interface ExtractionOptions {
   /** Exponente de la máscara de centro (0 = sin aislamiento). */
   centerPower?: number;
+  /** Parte del sonido no centrado que se conserva (0 = solo el centro). */
+  centerFloor?: number;
+
   onProgress?: (p: number) => void;
   /** Diagnóstico: recibe los contornos tras cada etapa. */
-  debug?: (stage: string, contours: readonly { start: number; length: number; midi: number; alive: boolean; vibrato: boolean; decayRate: number; meanSal: number; jitter: number; meanHarm: number }[]) => void;
+  debug?: (stage: string, contours: readonly { start: number; length: number; midi: number; alive: boolean; vibrato: boolean; decayRate: number; meanSal: number; jitter: number; meanHarm: number; decay2: number }[]) => void;
 }
 
 interface Peak {
@@ -69,6 +75,7 @@ function salienceFrames(left: Float32Array, right: Float32Array | null, sr: numb
   const maskOf = new Float64Array(half);
   const kMax = Math.min(half - 2, Math.ceil((5000 * N) / sr));
   const centerPower = opts.centerPower ?? 3;
+  const centerFloor = opts.centerFloor ?? 0.3;
   const times: number[] = [];
   const out: Peak[][] = [];
   const frames = Math.max(0, Math.floor((left.length - N) / HOP) + 1);
@@ -97,7 +104,7 @@ function salienceFrames(left: Float32Array, right: Float32Array | null, sr: numb
         // Máscara de centro: 1 si L y R son iguales (fuente centrada), → 0 si están a un lado.
         const mask = l2 + r2 > 0 ? Math.max(0, (2 * (lr * rr + li * ri)) / (l2 + r2)) : 0;
         maskOf[k] = mask;
-        mag[k] = Math.hypot(mr, mi) * mask ** centerPower;
+        mag[k] = Math.hypot(mr, mi) * (centerFloor + (1 - centerFloor) * mask ** centerPower);
       }
       if (mag[k] > peakMax) peakMax = mag[k];
     }
@@ -180,6 +187,8 @@ interface Contour {
   /** Mediana del cambio de altura entre frames (bins de 10 c): la voz es suave; el ruido salta. */
   jitter: number;
   meanHarm: number;
+  /** Caída entre 0,3 s y 0,55 s (ln/s): un sonido pulsado se sigue apagando; la voz se estabiliza. */
+  decay2: number;
   alive: boolean;
 }
 
@@ -238,7 +247,7 @@ function buildContours(peaks: Peak[][]): Contour[] {
     // Nuevos contornos: solo desde picos fuertes (≥ 90 % del máximo del frame).
     frame.forEach((p, i) => {
       if (used.has(i) || p.salience < 0.9 * max || p.salience < globalMin) return;
-      active.push({ c: { start: f, bins: [p.bin], sal: [p.salience], center: [p.center], harm: [p.harm], meanBin: 0, meanSal: 0, totalSal: 0, vibrato: false, decayRate: 0, medianSal: 0, jitter: 0, meanHarm: 0, alive: true }, last: f });
+      active.push({ c: { start: f, bins: [p.bin], sal: [p.salience], center: [p.center], harm: [p.harm], meanBin: 0, meanSal: 0, totalSal: 0, vibrato: false, decayRate: 0, medianSal: 0, jitter: 0, meanHarm: 0, decay2: NaN, alive: true }, last: f });
     });
   });
   done.push(...active.map((a) => a.c));
@@ -258,10 +267,12 @@ function buildContours(peaks: Peak[][]): Contour[] {
       };
       const head = at(0.03, 0.1);
       const later = at(0.25, 0.35);
+      const late2 = at(0.5, 0.6);
       const sorted = c.sal.filter((v) => v > 0).sort((a, b) => a - b);
       const steps = c.bins.slice(1).map((b, i) => Math.abs(b - c.bins[i])).filter((_, i) => c.sal[i] > 0 && c.sal[i + 1] > 0).sort((a, b) => a - b);
       return {
         ...c,
+        decay2: c.bins.length >= 0.6 * frameRate && later > 0 && late2 > 0 ? Math.log(later / late2) / 0.25 : NaN,
         jitter: steps.length ? steps[steps.length >> 1] : 0,
         meanHarm: (() => {
           const h = c.harm.filter((v) => v > 0);
@@ -309,6 +320,11 @@ function meanOver(m: Float64Array, c: Contour): number {
 
 /** Por debajo de este grado de "centrado" en estéreo, la altura se atribuye a un instrumento lateral. */
 const CENTER_MIN = 0.6;
+/** Un contorno más de 13 semitonos por debajo del registro de la melodía es el bajo (o un armónico suyo). */
+const REGISTER_BELOW_BINS = 130;
+/** Voz superior: un contorno con otro vivo > 6 semitonos por encima a la vez se penaliza. */
+const UPPER_GAP_BINS = 60;
+const UPPER_PENALTY = 0.3;
 
 /** Extrae la línea melódica principal. `right` = null para audio mono. */
 export function extractMelody(left: Float32Array, right: Float32Array | null, sampleRate: number, opts: ExtractionOptions = {}): MelodyFrame[] {
@@ -318,14 +334,17 @@ export function extractMelody(left: Float32Array, right: Float32Array | null, sa
   const contours = buildContours(peaks);
 
   const report = (stage: string) =>
-    opts.debug?.(stage, contours.map((c) => ({ start: c.start, length: c.bins.length, midi: binToMidi(c.meanBin), alive: c.alive, vibrato: c.vibrato, decayRate: c.decayRate, meanSal: c.meanSal, jitter: c.jitter, meanHarm: c.meanHarm })));
+    opts.debug?.(stage, contours.map((c) => ({ start: c.start, length: c.bins.length, midi: binToMidi(c.meanBin), alive: c.alive, vibrato: c.vibrato, decayRate: c.decayRate, meanSal: c.meanSal, jitter: c.jitter, meanHarm: c.meanHarm, decay2: c.decay2 })));
   report('inicio');
   // Voz / no voz:
   // - fuera los sonidos que se apagan como una cuerda pulsada, un bajo o un piano (la voz se sostiene);
   // - fuera los contornos poco salientes (μ − 0,2σ), salvo si tienen vibrato;
   // - si hay contornos con vibrato (voz casi segura), la referencia es su saliencia.
   for (const c of contours) {
-    if (!c.vibrato && c.decayRate > 1) c.alive = false;
+    // Se apaga tras el ataque y (si dura) se sigue apagando: piano, guitarra o bajo. La voz
+    // puede atacar con fuerza, pero luego se sostiene.
+    const keepsDecaying = Number.isNaN(c.decay2) || c.decay2 >= 1;
+    if (!c.vibrato && c.decayRate > 1 && keepsDecaying) c.alive = false;
     if (c.jitter > 2) c.alive = false; // salta más de 20 c por frame: ruido, no una nota
     const voicedCenter = c.center.filter((_, i) => c.sal[i] > 0);
     const meanCenter = voicedCenter.reduce((a, b) => a + b, 0) / Math.max(1, voicedCenter.length);
@@ -346,6 +365,16 @@ export function extractMelody(left: Float32Array, right: Float32Array | null, sa
     const vib = candidates.filter((c) => c.vibrato).map((c) => c.meanSal).sort((a, b) => a - b);
     const ref = vib.length >= 2 ? Math.max(vib[vib.length >> 1], p75 * 0.6) : p75;
     for (const c of candidates) if (!c.vibrato && c.meanSal < 0.5 * ref) c.alive = false;
+  }
+
+  // Registro de la melodía: mediana (ponderada por saliencia) de las alturas vivas. Un contorno
+  // muy por debajo es el bajo o un armónico suyo, no la voz.
+  {
+    const alive = contours.filter((c) => c.alive).map((c) => ({ b: c.meanBin, w: c.totalSal * (c.vibrato ? 2 : 1) })).sort((a, b) => a.b - b.b);
+    const totalW = alive.reduce((a, x) => a + x.w, 0);
+    let acc = 0;
+    const median = alive.find((x) => (acc += x.w) >= totalW / 2)?.b;
+    if (median !== undefined) for (const c of contours) if (c.alive && c.meanBin < median - REGISTER_BELOW_BINS) c.alive = false;
   }
 
   report('voz');
@@ -377,13 +406,22 @@ export function extractMelody(left: Float32Array, right: Float32Array | null, sa
   // En cada frame, el contorno con más saliencia total (el vibrato, típico de la voz, suma).
   const best = new Int32Array(t.length).fill(-1);
   const score = new Float64Array(t.length);
+  // Voz superior: si a la vez suena otro contorno vivo bastante más agudo, este (más grave)
+  // probablemente es el bajo o un acompañamiento: se penaliza. La melodía suele ir arriba.
+  const aliveAt: number[][] = Array.from({ length: t.length }, () => []);
+  contours.forEach((c, idx) => {
+    if (!c.alive) return;
+    for (let i = 0; i < c.bins.length; i++) if (c.sal[i] > 0) aliveAt[c.start + i].push(idx);
+  });
   contours.forEach((c, idx) => {
     if (!c.alive) return;
     const s = c.totalSal * (c.vibrato ? 1.5 : 1);
     for (let i = 0; i < c.bins.length; i++) {
       const f = c.start + i;
-      if (s > score[f]) {
-        score[f] = s;
+      let sf = s;
+      if (aliveAt[f].some((j) => j !== idx && contours[j].bins[f - contours[j].start] - c.bins[i] > UPPER_GAP_BINS)) sf *= UPPER_PENALTY;
+      if (sf > score[f]) {
+        score[f] = sf;
         best[f] = idx;
       }
     }

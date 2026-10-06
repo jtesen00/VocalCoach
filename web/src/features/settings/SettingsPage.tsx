@@ -57,9 +57,10 @@ export function SettingsPage({ settings, updateSettings, onMeasureVoice }: Props
               type="radio"
               name="instrument"
               checked={settings.instrument === ins.id}
-              onChange={() => {
+              onChange={async () => {
                 updateSettings({ instrument: ins.id });
-                audioEngine.setInstrument(ins.id);
+                audioEngine.stopGuide();
+                await audioEngine.setInstrument(ins.id);
                 preview(settings.accompaniment);
               }}
             />
@@ -77,6 +78,10 @@ export function SettingsPage({ settings, updateSettings, onMeasureVoice }: Props
           </span>
         </label>
         <p><button onClick={() => preview(settings.accompaniment)}>▶ Probar sonido</button></p>
+        <p className="hint">
+          Grabaciones: piano Salamander (A. Holm, CC BY 3.0), voz FluidR3 (F. Wen, CC BY 3.0) y silbido, flauta y cuerdas Musyng Kite (CC BY-SA 3.0).{' '}
+          <a href={`${import.meta.env.BASE_URL}samples/CREDITS.md`} target="_blank" rel="noreferrer">Créditos</a>
+        </p>
       </fieldset>
 
       <fieldset>

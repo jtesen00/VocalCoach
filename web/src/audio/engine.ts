@@ -4,7 +4,7 @@ import type { DetectorKind, PitchFrame } from '../core/pitch/types';
 import { checkBluetooth, type BluetoothCheck } from './devices';
 import type { PitchProcessorOptions, WorkletMessage } from './pitch-worklet';
 import { scheduleClick, type GuideEvent } from './guide';
-import { playChords, playMelody, type InstrumentId } from './instruments';
+import { loadInstrument, playChords, playMelody, type InstrumentId } from './instruments';
 import type { TimedChord } from '../core/music/chords';
 import workletUrl from './pitch-worklet.ts?worker&url';
 
@@ -157,9 +157,13 @@ export class AudioEngine {
    * Llamada y respuesta: suena la guía y, mientras tanto, se ignora el micro
    * para no detectar la propia referencia. `done` se resuelve cuando el usuario puede cantar.
    */
-  /** Instrumento de la guía y las demostraciones. */
-  setInstrument(id: InstrumentId): void {
+  /**
+   * Instrumento de la guía y las demostraciones. Empieza a descargar sus grabaciones;
+   * la promesa se resuelve cuando están listas (mientras tanto suena la versión sintetizada).
+   */
+  setInstrument(id: InstrumentId): Promise<boolean> {
     this.instrument = id;
+    return loadInstrument(id);
   }
 
   playGuide(events: readonly GuideEvent[], chords?: readonly TimedChord[]): { startT: number; endT: number; done: Promise<void> } {

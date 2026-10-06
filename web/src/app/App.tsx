@@ -18,7 +18,7 @@ export function App() {
   const snapshot = useEngineSnapshot();
   const running = snapshot.status === 'running';
 
-  useEffect(() => audioEngine.setInstrument(settings.instrument), [settings.instrument]);
+  useEffect(() => void audioEngine.setInstrument(settings.instrument), [settings.instrument]);
 
   // Quien midió su voz antes de existir el perfil vocal: se usa esa medición como punto de partida.
   useEffect(() => {

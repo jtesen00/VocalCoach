@@ -79,6 +79,34 @@ Velocidad: unos 27 ms por segundo de audio en CPU de servidor (una canción de 4
 - Coros, dobles voces, instrumentos solistas centrados (por ejemplo, un solo de saxo) o mucha reverberación pueden confundir la extracción.
 - No hay letra: cada frase se identifica por su minuto en la canción ("0:12 – 0:18"), su forma melódica y el botón ▶ para escucharla.
 
+### Mezcla realista con instrumentos grabados (E2E `melody-real.spec.ts`)
+
+La mezcla sintética (tonos puros) daba resultados demasiado optimistas. `web/src/dev/real-mix.ts` genera una canción con las grabaciones de la guía:
+- **Cantante:** voz «uuh» con ataque desde abajo, vibrato, deriva lenta y huecos entre sílabas.
+- **Banda:** piano en corcheas a la izquierda, cuerdas a la derecha, bajo centrado y batería.
+- **Producción:** reverb de sala en todo.
+
+Notas cantadas que salen con la altura correcta tras limpiar la línea:
+
+| Caso | Antes | Ahora |
+|---|---|---|
+| Estéreo, voz a 0 dB | 73 % | 97 % |
+| Estéreo, voz 4 dB bajo la banda | 37 % | 95 % |
+| Mono | 85 % | 95 % |
+| Voz grave (−12) | 78 % | 80 % |
+| Mucho vibrato (±60 c) | 63 % | 95 % |
+| Otras semillas aleatorias | 52–67 % | 95 % |
+
+Cambios:
+- **Realce del centro con suelo del 30 %:** con reverb, la voz real no es perfectamente centrada.
+- **Decaimiento en dos tramos:** se descarta como pulsado solo lo que se sigue apagando entre 0,3 y 0,55 s; la voz ataca y se sostiene.
+- **Voz superior:** penalización ×0,3 a un contorno con otro vivo más de 6 semitonos por encima.
+- **Registro:** fuera lo que queda más de 13 semitonos bajo la mediana de la melodía (el bajo).
+
+Coste en la mezcla sintética: con notas muy rápidas, la altura correcta baja del 100 % al 91 %. Una nota que coincide con un acorde de piano que se apaga puede descartarse.
+
+Probado y descartado: **Basic Pitch** (Spotify, Apache-2.0) como saliencia. Es polifónico y sigue al acompañamiento: el 55 % de las notas salía bien, frente al 73 % del método de entonces. Además, sin WebGL tarda ~1× tiempo real.
+
 ## Siguiente paso recomendado (8c)
 Separación de voz como **trabajo opcional**:
 1. En servidor: cola en Postgres + GPU serverless (ADR-005/008).

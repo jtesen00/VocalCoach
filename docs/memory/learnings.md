@@ -24,3 +24,11 @@
 - **Redondear la clase de altura antes del módulo**: `round(x) % 12`, no `round(x % 12)` (que puede dar 12).
 - **Un extractor de voz descarta a propósito sonidos que decaen** (piano): no sirve para validar una demo de piano. Cada cosa se valida con su herramienta.
 - **`OfflineAudioContext` en Playwright** permite renderizar y verificar audio sintetizado en tests E2E.
+- **Las muestras GM derivan de afinación** (silbido y flauta, hasta 30 c en el ataque y ±15 c después): para una guía de afinación se corrigen nota a nota, re-muestreando con velocidad variable según el f0 medido. El vibrato se añade luego, de forma controlada.
+- **Bucle de una nota afinada = número entero de periodos.** Si no, el fundido cruzado mezcla dos tramos desfasados y se oye un batido.
+- **Un AudioBuffer sirve en cualquier contexto:** las muestras se decodifican una vez en un `OfflineAudioContext` propio, antes de pedir el micrófono, y se reutilizan en el contexto en vivo y en los renders de test.
+- **Medir con mezclas realistas cambia las conclusiones:** con tonos sintéticos la extracción daba un 92–100 %; con instrumentos grabados y un cantante "humano", un 37–85 %. Los fallos eran tres:
+  - la máscara de centro al cubo borraba la voz con reverb;
+  - la regla "decae tras el ataque" mataba notas cantadas con ataque fuerte;
+  - el bajo centrado ganaba a la voz.
+- **Basic Pitch no es un extractor de melodía:** detecta todas las notas (polifónico), así que como saliencia sigue al acompañamiento. Además, en CPU (sin WebGL) tarda ~1× tiempo real.

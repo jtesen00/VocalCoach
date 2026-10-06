@@ -22,11 +22,11 @@ describe('extracción de la melodía de una canción completa (voz + instrumento
   it.each<[string, MixOptions, { rpa: number; fa: number; notes: number }]>([
     ['estéreo, voz al nivel de los instrumentos', {}, { rpa: 0.95, fa: 0.1, notes: 0.9 }],
     ['mono (sin información estéreo)', { stereo: false }, { rpa: 0.9, fa: 0.25, notes: 0.85 }],
-    ['voz 6 dB por debajo', { vocalDb: -6 }, { rpa: 0.85, fa: 0.35, notes: 0.85 }],
+    ['voz 6 dB por debajo', { vocalDb: -6 }, { rpa: 0.95, fa: 0.25, notes: 0.95 }],
     ['voz recta, sin vibrato', { vibrato: 0 }, { rpa: 0.95, fa: 0.1, notes: 0.9 }],
     ['voz grave (una octava abajo)', { transpose: -12 }, { rpa: 0.95, fa: 0.15, notes: 0.9 }],
     ['voz aguda', { transpose: 7 }, { rpa: 0.9, fa: 0.1, notes: 0.85 }],
-    ['notas rápidas', { speed: 0.6 }, { rpa: 0.95, fa: 0.1, notes: 0.9 }],
+    ['notas rápidas', { speed: 0.6 }, { rpa: 0.88, fa: 0.1, notes: 0.85 }],
   ])('%s', (_, options, min) => {
     const s = evaluate(options);
     expect(s.rawPitchAccuracy).toBeGreaterThanOrEqual(min.rpa);

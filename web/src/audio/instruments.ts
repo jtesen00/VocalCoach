@@ -1,274 +1,184 @@
 import type { GuideEvent } from '../core/exercises/guide';
 import { chordMidis, type TimedChord } from '../core/music/chords';
-import { midiToFreq } from '../core/music/notes';
+import { mix } from './mix';
+import { getBank, loadBank, pickNote, rateFor, type SampleBank, type SampleNote } from './samples';
+import { firstMidi, lastMidi, runs, synthChords, synthMelody, type Nodes } from './synth';
 
 /**
- * Instrumentos sintetizados para la guía y las demostraciones. Todo se genera en el
- * dispositivo (Web Audio): sin muestras grabadas, sin descargas y sin derechos de terceros.
+ * Instrumentos de la guía y las demostraciones: grabaciones reales nota a nota
+ * (piano de cola, voz, silbido, flauta y cuerdas), afinadas y tocadas ligadas.
+ * Mientras cargan, o si no se pueden cargar, suenan versiones sintetizadas.
  */
 export type InstrumentId = 'piano' | 'silbido' | 'flauta' | 'voz' | 'cuerdas';
 
 export const INSTRUMENTS: { id: InstrumentId; name: string; description: string }[] = [
-  { id: 'piano', name: 'Piano', description: 'Notas claras con cuerpo; ideal para oír cada nota.' },
-  { id: 'voz', name: 'Voz «uuh»', description: 'Como un cantante en vocal «u»: fácil de imitar.' },
-  { id: 'silbido', name: 'Silbido', description: 'Limpio y ligado, deja oír muy bien la melodía.' },
-  { id: 'flauta', name: 'Flauta', description: 'Suave y ligada, con un poco de aire.' },
-  { id: 'cuerdas', name: 'Cuerdas', description: 'Cálido y continuo, como una sección de violines.' },
+  { id: 'piano', name: 'Piano', description: 'Piano de cola grabado: cada nota clara y definida.' },
+  { id: 'voz', name: 'Voz «uuh»', description: 'Voces cantando «uuh»: la referencia más fácil de imitar.' },
+  { id: 'silbido', name: 'Silbido', description: 'Silbido real, ligado: la melodía se oye muy limpia.' },
+  { id: 'flauta', name: 'Flauta', description: 'Flauta travesera, suave y ligada.' },
+  { id: 'cuerdas', name: 'Cuerdas', description: 'Sección de violines: cálido y continuo.' },
 ];
 
-interface Voice {
-  /** Instrumentos que sostienen el sonido: una sola voz por frase que se desliza entre notas. */
-  legato: boolean;
-  level: number;
-  attack: number;
-  release: number;
-  /** Tiempo de deslizamiento entre notas (s). */
-  glide: number;
-  vibratoCents: number;
+/** Instrumento del acompañamiento: piano con el piano; colchón de cuerdas con los demás. */
+const padFor = (id: InstrumentId): InstrumentId => (id === 'piano' ? 'piano' : 'cuerdas');
+
+/** Descarga las grabaciones del instrumento (y de su acompañamiento). `true` si están listas. */
+export async function loadInstrument(id: InstrumentId): Promise<boolean> {
+  const [a, b] = await Promise.all([loadBank(id), loadBank(padFor(id))]);
+  return a !== null && b !== null;
 }
 
-const VOICES: Record<InstrumentId, Voice> = {
-  piano: { legato: false, level: 0.32, attack: 0.003, release: 0.12, glide: 0, vibratoCents: 0 },
-  voz: { legato: true, level: 0.3, attack: 0.08, release: 0.15, glide: 0.09, vibratoCents: 22 },
-  silbido: { legato: true, level: 0.22, attack: 0.05, release: 0.1, glide: 0.07, vibratoCents: 14 },
-  flauta: { legato: true, level: 0.24, attack: 0.06, release: 0.12, glide: 0.05, vibratoCents: 12 },
-  cuerdas: { legato: true, level: 0.13, attack: 0.15, release: 0.25, glide: 0.08, vibratoCents: 9 },
+export function instrumentReady(id: InstrumentId): boolean {
+  return getBank(id) !== null;
+}
+
+interface Style {
+  level: number;
+  /** Deslizamiento entre notas ligadas (s). */
+  glide: number;
+  /** Profundidad del vibrato (centésimas) y frecuencia (Hz). */
+  vibrato: number;
+  vibratoHz: number;
+  release: number;
+}
+
+const STYLE: Record<InstrumentId, Style> = {
+  piano: { level: 0.9, glide: 0, vibrato: 0, vibratoHz: 0, release: 0.25 },
+  voz: { level: 1.0, glide: 0.08, vibrato: 18, vibratoHz: 5.3, release: 0.2 },
+  silbido: { level: 0.85, glide: 0.06, vibrato: 0, vibratoHz: 5.6, release: 0.12 },
+  flauta: { level: 0.95, glide: 0.04, vibrato: 10, vibratoHz: 5.2, release: 0.15 },
+  cuerdas: { level: 0.9, glide: 0.06, vibrato: 0, vibratoHz: 5.5, release: 0.3 },
 };
 
-interface Bus {
-  input: GainNode;
-  noise: AudioBuffer;
-}
+/** Solape entre una nota ligada y la siguiente (s). */
+const XFADE = 0.07;
+/** Las notas ligadas empiezan tras su ataque: suena una sola línea continua, sin re-atacar. */
+const LEGATO_OFFSET = 0.12;
 
-const buses = new WeakMap<BaseAudioContext, Bus>();
-
-/** Salida común con reverberación de sala (respuesta al impulso generada, estéreo, ~1,6 s). */
-function bus(ctx: BaseAudioContext): Bus {
-  const cached = buses.get(ctx);
-  if (cached) return cached;
-  const input = ctx.createGain();
-  const dry = ctx.createGain();
-  const wet = ctx.createGain();
-  dry.gain.value = 1;
-  wet.gain.value = 0.22;
-  const ir = ctx.createBuffer(2, Math.round(1.6 * ctx.sampleRate), ctx.sampleRate);
-  for (let ch = 0; ch < 2; ch++) {
-    const d = ir.getChannelData(ch);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp((-5 * i) / d.length) * (i < 200 ? i / 200 : 1);
+function source(ctx: BaseAudioContext, bank: SampleBank, midi: number, t: number, offset: number, nodes: Nodes) {
+  const { note, base } = pickNote(bank, midi);
+  const src = ctx.createBufferSource();
+  src.buffer = bank.buffer;
+  src.playbackRate.setValueAtTime(rateFor(note, midi), t);
+  if (note.loop) {
+    src.loop = true;
+    src.loopStart = base + note.loop[0];
+    src.loopEnd = base + note.loop[1];
   }
-  const conv = ctx.createConvolver();
-  conv.buffer = ir;
-  input.connect(dry).connect(ctx.destination);
-  input.connect(conv).connect(wet).connect(ctx.destination);
-  const noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-  const nd = noise.getChannelData(0);
-  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-  const b = { input, noise };
-  buses.set(ctx, b);
-  return b;
+  src.start(t, base + offset);
+  nodes.push(src);
+  return { src, note, base };
 }
 
-type Nodes = AudioScheduledSourceNode[];
-
-/** Fuente de sonido de un instrumento legato, conectada a `out`; devuelve sus parámetros de frecuencia. */
-function legatoSource(ctx: BaseAudioContext, id: InstrumentId, out: AudioNode, start: number, end: number, nodes: Nodes): { freqs: AudioParam[]; detunes: AudioParam[] } {
-  const freqs: AudioParam[] = [];
-  const detunes: AudioParam[] = [];
-  const osc = (type: OscillatorType | PeriodicWave, detune = 0) => {
-    const o = ctx.createOscillator();
-    if (typeof type === 'string') o.type = type as OscillatorType;
-    else o.setPeriodicWave(type);
-    o.detune.value = detune;
-    freqs.push(o.frequency);
-    detunes.push(o.detune);
-    o.start(start);
-    o.stop(end);
-    nodes.push(o);
-    return o;
-  };
-  const breath = (hz: number, q: number, gain: number) => {
-    const n = ctx.createBufferSource();
-    n.buffer = bus(ctx).noise;
-    n.loop = true;
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = hz;
-    bp.Q.value = q;
-    const g = ctx.createGain();
-    g.gain.value = gain;
-    n.connect(bp).connect(g).connect(out);
-    n.start(start);
-    n.stop(end);
-    nodes.push(n);
-  };
-
-  switch (id) {
-    case 'silbido':
-      osc('sine').connect(out);
-      breath(3200, 1.2, 0.05);
-      break;
-    case 'flauta': {
-      const real = new Float32Array([0, 1, 0.42, 0.16, 0.07, 0.03]);
-      const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 4500;
-      osc(ctx.createPeriodicWave(real, new Float32Array(real.length))).connect(lp).connect(out);
-      breath(1800, 0.8, 0.04);
-      break;
-    }
-    case 'voz': {
-      // Diente de sierra (cuerdas vocales) a través de formantes de la vocal «u/o».
-      const mix = ctx.createGain();
-      osc('sawtooth', -5).connect(mix);
-      osc('sawtooth', 5).connect(mix);
-      for (const [hz, q, g] of [[400, 5, 1], [850, 7, 0.45], [2700, 9, 0.12]] as const) {
-        const bp = ctx.createBiquadFilter();
-        bp.type = 'bandpass';
-        bp.frequency.value = hz;
-        bp.Q.value = q;
-        const gn = ctx.createGain();
-        gn.gain.value = g * 3;
-        mix.connect(bp).connect(gn).connect(out);
-      }
-      break;
-    }
-    case 'cuerdas': {
-      const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 2600;
-      lp.Q.value = 0.6;
-      for (const d of [-8, 0, 8]) osc('sawtooth', d).connect(lp);
-      lp.connect(out);
-      break;
-    }
-    default:
-      break;
-  }
-  return { freqs, detunes };
-}
-
-/** Grupos de eventos seguidos, sin silencio entre ellos (cada grupo se toca ligado). */
-function runs(events: readonly GuideEvent[], start: number): { t: number; ev: Exclude<GuideEvent, { type: 'rest' }> }[][] {
-  const out: { t: number; ev: Exclude<GuideEvent, { type: 'rest' }> }[][] = [];
-  let t = start;
-  let cur: { t: number; ev: Exclude<GuideEvent, { type: 'rest' }> }[] = [];
-  for (const ev of events) {
-    if (ev.type === 'rest') {
-      if (cur.length) out.push(cur);
-      cur = [];
-    } else cur.push({ t, ev });
-    t += ev.durationS;
-  }
-  if (cur.length) out.push(cur);
-  return out;
-}
-
-const firstMidi = (ev: Exclude<GuideEvent, { type: 'rest' }>) => (ev.type === 'note' ? ev.midi : ev.fromMidi);
-const lastMidi = (ev: Exclude<GuideEvent, { type: 'rest' }>) => (ev.type === 'note' ? ev.midi : ev.toMidi);
-
-function playLegato(ctx: BaseAudioContext, id: InstrumentId, events: readonly GuideEvent[], start: number, out: AudioNode, nodes: Nodes, gainScale = 1) {
-  const v = VOICES[id];
+/** Línea ligada con un instrumento sostenido: cada nota se funde con la siguiente y la altura se desliza. */
+function playSustained(ctx: BaseAudioContext, id: InstrumentId, bank: SampleBank, events: readonly GuideEvent[], start: number, out: AudioNode, nodes: Nodes, gainScale = 1) {
+  const st = STYLE[id];
+  const L = st.level * gainScale;
   for (const run of runs(events, start)) {
-    const t0 = run[0].t;
-    const last = run[run.length - 1];
-    const t1 = last.t + last.ev.durationS;
-    const env = ctx.createGain();
-    env.connect(out);
-    const { freqs, detunes } = legatoSource(ctx, id, env, t0, t1 + v.release + 0.05, nodes);
-
-    // Envolvente: ataque, pequeñas re-articulaciones entre notas y caída final.
-    const L = v.level * gainScale;
-    env.gain.setValueAtTime(0, t0);
-    env.gain.linearRampToValueAtTime(L, t0 + v.attack);
-    for (const { t, ev } of run.slice(1)) {
-      if (ev.type === 'note' && ev.durationS > 0.15 && t - 0.05 > t0 + v.attack) {
-        env.gain.setValueAtTime(L, t - 0.05);
-        env.gain.linearRampToValueAtTime(L * 0.72, t - 0.005);
-        env.gain.linearRampToValueAtTime(L, t + 0.06);
-      }
-    }
-    env.gain.setValueAtTime(L, Math.max(t0 + v.attack, t1 - 0.02));
-    env.gain.linearRampToValueAtTime(0, t1 + v.release);
-
-    // Altura: deslizamiento breve hacia cada nota nueva; las sirenas se deslizan enteras.
-    for (const f of freqs) {
-      f.setValueAtTime(midiToFreq(firstMidi(run[0].ev)), t0);
-      run.forEach(({ t, ev }, i) => {
-        if (ev.type === 'glide') {
-          f.setValueAtTime(midiToFreq(ev.fromMidi), t);
-          f.exponentialRampToValueAtTime(midiToFreq(ev.toMidi), t + ev.durationS);
-        } else if (i > 0) {
-          const prevEv = run[i - 1].ev;
-          const g = Math.min(v.glide, prevEv.durationS / 3);
-          f.setValueAtTime(midiToFreq(lastMidi(prevEv)), Math.max(t0, t - g));
-          f.exponentialRampToValueAtTime(midiToFreq(ev.midi), t);
-        }
-      });
-    }
-
-    // Vibrato (se nota en las notas largas).
-    if (v.vibratoCents) {
-      const lfo = ctx.createOscillator();
-      lfo.frequency.value = 5.4;
-      const depth = ctx.createGain();
-      depth.gain.setValueAtTime(0, t0);
-      depth.gain.linearRampToValueAtTime(v.vibratoCents, t0 + 0.6);
-      lfo.connect(depth);
-      for (const d of detunes) depth.connect(d);
-      lfo.start(t0);
-      lfo.stop(t1 + v.release + 0.05);
+    const runEnd = run[run.length - 1].t + run[run.length - 1].ev.durationS;
+    const lfo = st.vibrato ? ctx.createOscillator() : null;
+    if (lfo) {
+      lfo.frequency.value = st.vibratoHz;
+      lfo.start(run[0].t);
+      lfo.stop(runEnd + st.release * 3);
       nodes.push(lfo);
     }
+    let prev: { src: AudioBufferSourceNode; g: GainNode; note: SampleNote; midi: number; glide: boolean } | null = null;
+    run.forEach(({ t, ev }, i) => {
+      const from = firstMidi(ev);
+      const to = lastMidi(ev);
+      const end = t + ev.durationS;
+      const first = i === 0;
+      const t0 = first ? t : t - XFADE / 2;
+      const { src, note } = source(ctx, bank, (from + to) / 2, t0, first ? 0 : LEGATO_OFFSET, nodes);
+      const g = ctx.createGain();
+      src.connect(g).connect(out);
+
+      // Altura: deslizamiento desde la nota anterior; las sirenas se deslizan enteras.
+      const r = (m: number) => rateFor(note, m);
+      if (ev.type === 'glide') {
+        src.playbackRate.setValueAtTime(r(from), t);
+        src.playbackRate.exponentialRampToValueAtTime(r(to), end);
+      } else if (prev && !prev.glide && st.glide > 0) {
+        const gl = Math.min(st.glide, ev.durationS / 3);
+        src.playbackRate.setValueAtTime(r(prev.midi), t0);
+        src.playbackRate.exponentialRampToValueAtTime(r(from), t0 + gl);
+        // La nota que se va también se desliza hacia la nueva mientras se apaga.
+        const pr = (m: number) => rateFor(prev!.note, m);
+        prev.src.playbackRate.setValueAtTime(pr(prev.midi), t0);
+        prev.src.playbackRate.exponentialRampToValueAtTime(pr(from), t0 + gl);
+      } else {
+        src.playbackRate.setValueAtTime(r(from), t0);
+      }
+
+      // Volumen: entra suave (o con su ataque natural si es la primera) y se funde con la siguiente.
+      g.gain.setValueAtTime(first ? L : 0, t0);
+      if (!first) g.gain.linearRampToValueAtTime(L, t0 + XFADE);
+      // Frase musical: las notas largas crecen un poco y se relajan al final.
+      if (ev.durationS > 0.9) {
+        g.gain.linearRampToValueAtTime(L * 1.12, t + ev.durationS * 0.55);
+        g.gain.linearRampToValueAtTime(L, end - 0.05);
+      }
+      if (prev) {
+        prev.g.gain.cancelScheduledValues(t0);
+        prev.g.gain.setValueAtTime(L, t0);
+        prev.g.gain.linearRampToValueAtTime(0, t0 + XFADE);
+        prev.src.stop(t0 + XFADE + 0.02);
+      }
+      if (i === run.length - 1) {
+        g.gain.setValueAtTime(L, end);
+        g.gain.setTargetAtTime(0, end, st.release / 3);
+        src.stop(end + st.release * 2);
+      }
+
+      // Vibrato: aparece poco a poco en las notas que duran.
+      if (lfo && src.detune && ev.type === 'note' && ev.durationS > 0.35) {
+        const depth = ctx.createGain();
+        depth.gain.setValueAtTime(0, t);
+        depth.gain.linearRampToValueAtTime(0, t + 0.25);
+        depth.gain.linearRampToValueAtTime(st.vibrato, t + 0.6);
+        lfo.connect(depth).connect(src.detune);
+      }
+      prev = { src, g, note, midi: to, glide: ev.type === 'glide' };
+    });
   }
 }
 
-/** Nota de piano: parciales con la inarmonicidad de una cuerda, ataque de martillo y caída natural. */
-function pianoNote(ctx: BaseAudioContext, midi: number, toMidi: number, t: number, dur: number, out: AudioNode, nodes: Nodes, level: number) {
-  const f = midiToFreq(midi);
-  const decay = Math.max(0.35, Math.min(2.4, 2.2 * Math.sqrt(220 / f)));
-  const end = t + dur;
-  const B = 0.0003;
-  for (let n = 1; n <= 8; n++) {
-    const ratio = n * Math.sqrt(1 + B * n * n);
-    const o = ctx.createOscillator();
-    o.frequency.setValueAtTime(f * ratio, t);
-    if (toMidi !== midi) o.frequency.exponentialRampToValueAtTime(midiToFreq(toMidi) * ratio, end);
-    const g = ctx.createGain();
-    const a = (level / n ** 1.5) * (n === 2 ? 0.7 : 1);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(a, t + 0.003);
-    g.gain.setTargetAtTime(a * 0.0005, t + 0.003, decay / (1 + 0.5 * (n - 1)));
-    g.gain.setTargetAtTime(0, end, 0.08);
-    o.connect(g).connect(out);
-    o.start(t);
-    o.stop(end + 0.5);
-    nodes.push(o);
-  }
-  // Martillo: un golpe breve de ruido filtrado.
-  const h = ctx.createBufferSource();
-  h.buffer = bus(ctx).noise;
+/** Nota de piano grabada; con `toMidi` distinto se desliza (sirenas). */
+function pianoNote(ctx: BaseAudioContext, bank: SampleBank, midi: number, toMidi: number, t: number, dur: number, out: AudioNode, nodes: Nodes, velocity: number) {
+  const { src, note } = source(ctx, bank, midi, t, 0, nodes);
+  const rate = rateFor(note, midi);
+  if (toMidi !== midi) src.playbackRate.exponentialRampToValueAtTime(rateFor(note, toMidi), t + dur);
+  const g = ctx.createGain();
+  // Los pianos suenan más brillantes cuanto más fuerte se toca.
   const lp = ctx.createBiquadFilter();
   lp.type = 'lowpass';
-  lp.frequency.value = Math.min(6000, f * 8);
-  const hg = ctx.createGain();
-  hg.gain.setValueAtTime(level * 0.12, t);
-  hg.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
-  h.connect(lp).connect(hg).connect(out);
-  h.start(t);
-  h.stop(t + 0.04);
-  nodes.push(h);
+  lp.frequency.value = 2500 + velocity * 9000;
+  src.connect(lp).connect(g).connect(out);
+  g.gain.setValueAtTime(velocity, t);
+  // Apagador al soltar la tecla; la ranura grabada dura `slot` s.
+  const maxEnd = t + (bank.slot - 0.05) / rate;
+  const release = Math.min(t + dur, maxEnd - 0.3);
+  g.gain.setValueAtTime(velocity, release);
+  g.gain.setTargetAtTime(0, release, 0.09);
+  src.stop(Math.min(maxEnd, release + 0.6));
 }
 
 /** Toca la melodía con el instrumento elegido. Devuelve el instante en que termina. */
 export function playMelody(ctx: BaseAudioContext, id: InstrumentId, events: readonly GuideEvent[], start: number, nodes: Nodes): number {
-  const out = bus(ctx).input;
+  const out = mix(ctx).melody;
   const end = start + events.reduce((a, e) => a + e.durationS, 0);
-  if (VOICES[id].legato) {
-    playLegato(ctx, id, events, start, out, nodes);
+  const bank = getBank(id);
+  if (!bank) {
+    synthMelody(ctx, id, events, start, out, nodes);
+    return end;
+  }
+  if (bank.sustain) {
+    playSustained(ctx, id, bank, events, start, out, nodes);
   } else {
     let t = start;
     for (const ev of events) {
-      if (ev.type !== 'rest') pianoNote(ctx, firstMidi(ev), lastMidi(ev), t, ev.durationS, out, nodes, VOICES.piano.level);
+      if (ev.type !== 'rest') pianoNote(ctx, bank, firstMidi(ev), lastMidi(ev), t, ev.durationS, out, nodes, STYLE.piano.level);
       t += ev.durationS;
     }
   }
@@ -276,41 +186,37 @@ export function playMelody(ctx: BaseAudioContext, id: InstrumentId, events: read
 }
 
 /**
- * Acompañamiento: acordes de piano (re-pulsados cada 2 s) o, con los instrumentos ligados,
- * un colchón suave de cuerdas. Más bajo que la melodía para no taparla.
+ * Acompañamiento: acordes de piano (re-tocados cada ~2 s, con el bajo un poco más fuerte)
+ * o un colchón de cuerdas. Va por el bus de acompañamiento: más bajo y sin agudos.
  */
 export function playChords(ctx: BaseAudioContext, id: InstrumentId, chords: readonly TimedChord[], start: number, nodes: Nodes): void {
-  const out = bus(ctx).input;
+  const out = mix(ctx).accomp;
+  const padId = padFor(id);
+  const bank = getBank(padId);
+  if (!bank) {
+    synthChords(ctx, id, chords, start, out, nodes);
+    return;
+  }
   for (const c of chords) {
     const t0 = start + c.startS;
     const t1 = start + c.endS;
     const midis = chordMidis(c.chord);
-    if (id === 'piano') {
+    if (!bank.sustain) {
       for (let t = t0; t < t1 - 0.2; t += 2) {
         const d = Math.min(2, t1 - t);
-        midis.forEach((m, i) => pianoNote(ctx, m, m, t + i * 0.012, d, out, nodes, i === 0 ? 0.13 : 0.08));
+        midis.forEach((m, i) => pianoNote(ctx, bank, m, m, t + i * 0.015, d, out, nodes, i === 0 ? 0.55 : 0.38));
       }
     } else {
-      const env = ctx.createGain();
-      env.gain.setValueAtTime(0, t0);
-      env.gain.linearRampToValueAtTime(0.03, t0 + 0.25);
-      env.gain.setValueAtTime(0.03, Math.max(t0 + 0.25, t1 - 0.1));
-      env.gain.linearRampToValueAtTime(0, t1 + 0.3);
-      const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 1100;
-      lp.connect(env).connect(out);
-      for (const m of midis) {
-        for (const d of [-6, 6]) {
-          const o = ctx.createOscillator();
-          o.type = 'sawtooth';
-          o.frequency.value = midiToFreq(m);
-          o.detune.value = d;
-          o.connect(lp);
-          o.start(t0);
-          o.stop(t1 + 0.4);
-          nodes.push(o);
-        }
+      for (const [i, m] of midis.entries()) {
+        const { src } = source(ctx, bank, m, t0, 0, nodes);
+        const g = ctx.createGain();
+        const level = i === 0 ? 0.42 : 0.3;
+        g.gain.setValueAtTime(0, t0);
+        g.gain.linearRampToValueAtTime(level, t0 + 0.2);
+        g.gain.setValueAtTime(level, Math.max(t0 + 0.2, t1 - 0.05));
+        g.gain.linearRampToValueAtTime(0, t1 + 0.35);
+        src.connect(g).connect(out);
+        src.stop(t1 + 0.4);
       }
     }
   }

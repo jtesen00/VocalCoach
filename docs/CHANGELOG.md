@@ -4,6 +4,43 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Mejorado — Guía con instrumentos grabados y extracción de MP3 mucho más precisa
+- **La guía suena con grabaciones reales nota a nota**, ya no con osciladores, que sonaban "a órgano":
+  - piano de cola Salamander;
+  - voces «uuh»;
+  - silbido;
+  - flauta;
+  - cuerdas.
+- Una nota cada 3 semitonos (C2–C7), procesadas con `web/scripts/build-samples.py`:
+  - **afinación corregida nota a nota**: el silbido y la flauta derivaban hasta 30 c y ahora quedan a < 1 c;
+  - volumen igualado;
+  - bucles en fase para que las notas largas se sostengan sin cortes;
+  - un MP3 por instrumento: 3,1 MB en total, que se descargan al elegir el instrumento.
+- **Fraseo de cantante:** las notas ligadas se funden entre sí con un breve deslizamiento, sin re-atacar. El vibrato aparece poco a poco en las notas largas y estas crecen un poco al sostenerse.
+- **Mezcla de estudio** (`audio/mix.ts`):
+  - melodía al frente con algo de presencia;
+  - acompañamiento detrás, más bajo y sin agudos;
+  - reverb de sala con predelay y cola que se oscurece;
+  - compresor suave en la salida.
+- Si las grabaciones no se pueden cargar, suenan los instrumentos sintetizados de antes (`audio/synth.ts`).
+- Créditos y licencias de los sonidos en Ajustes y en `web/public/samples/CREDITS.md` (CC BY 3.0 / CC BY-SA 3.0).
+- **Extracción de la melodía de MP3, medida con una mezcla realista** (`src/dev/real-mix.ts`):
+  - **Escenario de prueba:** instrumentos grabados y cantante con ataques desde abajo, vibrato y desafinaciones; piano, bajo, cuerdas, batería y reverb.
+  - **Resultado:** notas con la altura correcta, de **37–85 % a 80–97 %** según el caso. Ejemplos:
+    - estéreo: 73 % → 97 %;
+    - voz 4 dB bajo la banda: 37 % → 95 %;
+    - mucho vibrato: 63 % → 95 %.
+  - **Cambios:**
+    - el realce del centro conserva un 30 % del resto, porque con reverb la voz no está perfectamente centrada;
+    - un contorno que ataca fuerte solo se descarta como piano o bajo si después se sigue apagando, porque la voz se sostiene;
+    - preferencia por la voz superior frente a acompañamientos más graves;
+    - se descarta lo que queda más de 13 semitonos por debajo del registro de la melodía (el bajo).
+  - Se probó también la red Basic Pitch (Spotify) como saliencia: empeoraba (55 % de notas bien) y tardaba casi lo que dura la canción. Se descartó.
+- Tests:
+  - E2E con la mezcla realista en 5 escenarios, con umbrales;
+  - E2E de instrumentos ampliado: carga de grabaciones, notas y acordes exactos, desviación media < 8 c;
+  - umbrales de la extracción sintética actualizados.
+
 ### Mejorado — Sonido de la guía, acordes y frases tipo karaoke
 - **Instrumentos sintetizados a elegir** (Ajustes → Sonido de la guía): piano, voz «uuh», silbido, flauta y cuerdas.
   - Los que sostienen el sonido tocan **ligado** (una voz por frase que se desliza de nota a nota), con vibrato natural.
