@@ -107,3 +107,32 @@ test('editar una canción importada: título, letra, dividir, deshacer y guardar
   await page.getByRole('button', { name: 'Canciones', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Mi versión' })).toBeVisible();
 });
+
+test('editar: pegar la letra entera y corregir una nota suelta', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openSongs(page);
+  await page.locator('input[type=file]').setInputFiles({ name: 'cancion.txt', mimeType: 'text/plain', buffer: Buffer.from(ULTRASTAR, 'utf-8') });
+  await page.getByLabel(/Uso este archivo solo para mi práctica personal/).check();
+  await page.getByRole('button', { name: 'Importar melodía' }).click();
+  await page.getByRole('button', { name: '✏️ Editar letra y frases' }).click();
+
+  // Sin guiones ni saltos de línea: se separan las sílabas y se reparten entre las 2 frases (5 y 3 notas).
+  await page.getByRole('button', { name: '📋 Pegar la letra entera' }).click();
+  await page.getByLabel('Letra de toda la canción').fill('Ven conmigo ahora sol de mar');
+  await page.getByRole('button', { name: 'Repartir en las 2 frases' }).click();
+  await expect(page.getByLabel('Letra de la frase 1')).toHaveValue('Ven conmigo ahora');
+  await expect(page.getByLabel('Letra de la frase 2')).toHaveValue('sol de mar');
+
+  // Nota suelta: la 2.ª de la frase 1 («con») un semitono más aguda.
+  await page.getByRole('button', { name: 'Notas de la frase 1' }).click();
+  await page.getByRole('button', { name: /^Nota 2: .*«con»/ }).click();
+  await page.getByRole('button', { name: 'Más aguda ↑' }).click();
+  await page.getByRole('button', { name: 'Guardar cambios' }).click();
+
+  const song = await page.evaluate(() => JSON.parse(localStorage.getItem('vocalcoach.imported.v1')!).songs[0]);
+  const notes = song.sections.flatMap((s: { phrases: { notes: { midi: number; syllable: string }[] }[] }) => s.phrases)[0].notes;
+  // 7 sílabas en 5 notas: sinalefa «go a» y las últimas juntas.
+  expect(notes.map((n: { syllable: string }) => n.syllable)).toEqual(['Ven', 'con', 'mi', 'go a', 'ho ra']);
+  expect(notes[1].midi).toBe(notes[0].midi + 1);
+  await expect(page.locator('.phrase-list li').first()).toContainText('Ven conmigo ahora');
+});

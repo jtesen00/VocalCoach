@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Añadido — Letra automática y edición de notas (pendientes de 8c y 9)
+- **Sílabas automáticas en español** (`core/songs/syllables.ts`): la letra se reparte sola entre las notas, sin escribir guiones. Hay sinalefas cuando sobran sílabas («go_a») y melismas cuando faltan. Los guiones y «_» del usuario siguen mandando.
+- **📋 Pegar la letra entera** en el editor: se reparte entre todas las frases por sílabas, sin partir palabras y cortando preferentemente en los saltos de línea. Con tantas líneas como frases, va una línea por frase.
+- **Notas sueltas** en el editor: subir o bajar un semitono (suena al elegirla) y borrar sin mover el resto de la frase. La sílaba de la nota borrada no se pierde.
+
 ### Añadido — Fase 9: demostraciones cantadas y multi-IA
 - **Voz sintética que canta la letra** (peldaño 1 del ADR-008): síntesis por formantes en el dispositivo, sin IA ni voces de terceros. Fonemas del español, consonantes adelantadas al pulso, melismas, vibrato y voz grave o aguda.
   - «🗣 Escúchala cantada» en cada frase con letra.

@@ -1,6 +1,20 @@
 import { useState } from 'react';
+import { audioEngine } from '../../audio/engine';
 import { guideEvents } from '../../core/exercises/guide';
-import { deletePhrase, hasLyrics, mergeWithNext, naturalSplitPoint, renameSong, setPhraseLyrics, shiftPhraseOctave, splitPhrase } from '../../core/songs/edit';
+import { solfegeName } from '../../core/music/notes';
+import {
+  deleteNote,
+  deletePhrase,
+  hasLyrics,
+  mergeWithNext,
+  naturalSplitPoint,
+  renameSong,
+  setPhraseLyrics,
+  setSongLyrics,
+  shiftNote,
+  shiftPhraseOctave,
+  splitPhrase,
+} from '../../core/songs/edit';
 import { allPhrases, phrasePlan } from '../../core/songs/melody';
 import type { Song } from '../../core/songs/types';
 import { updateImportedSong } from '../../shared/imported-songs';
@@ -8,8 +22,9 @@ import { MelodyShape } from '../exercises/MelodyShape';
 import { ListenButton } from './ListenButton';
 
 /**
- * Editar una canción importada (Fase 8c): título, letra de cada frase y frases (unir, dividir,
- * cambiar de octava, borrar). Se trabaja sobre un borrador; nada se guarda hasta «Guardar».
+ * Editar una canción importada (Fases 8c y 9): título, letra (frase a frase o la canción
+ * entera de una vez), frases (unir, dividir, octava, borrar) y notas sueltas (subir, bajar,
+ * borrar). Se trabaja sobre un borrador; nada se guarda hasta «Guardar».
  */
 export function SongEditor({ song, onDone }: { song: Song; onDone: () => void }) {
   const [history, setHistory] = useState<Song[]>([song]);
@@ -17,6 +32,9 @@ export function SongEditor({ song, onDone }: { song: Song; onDone: () => void })
   const [title, setTitle] = useState(song.title);
   /** Letra escrita y aún no aplicada, por id de frase. */
   const [texts, setTexts] = useState<Record<string, string>>({});
+  const [fullLyrics, setFullLyrics] = useState<string | null>(null);
+  /** Frase con las notas desplegadas y nota elegida. */
+  const [notesOf, setNotesOf] = useState<{ phraseId: string; note: number | null } | null>(null);
   const phrases = allPhrases(draft);
   const extracted = !song.source;
 
@@ -56,16 +74,43 @@ export function SongEditor({ song, onDone }: { song: Song; onDone: () => void })
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />
       </label>
       <ul className="hint">
-        <li>Escribe la letra de cada frase. Separa las sílabas con guiones para que cada una caiga en su nota: «a-mor mí-o».</li>
-        {extracted && <li>Si una frase suena una octava más aguda o más grave que en la canción, corrígela con «Octava».</li>}
+        <li>Escribe la letra de cada frase: las sílabas se reparten solas entre las notas. Si alguna cae mal, sepárala tú con guiones («a-mor») o une dos en una nota con «_» («de_es»).</li>
+        {extracted && <li>Si una frase suena una octava más aguda o más grave que en la canción, corrígela con «Octava». Con «Notas» puedes corregir una nota suelta.</li>}
         <li>Une las frases demasiado cortas y divide las demasiado largas. El progreso de cada frase se conserva mientras exista.</li>
       </ul>
+
+      {fullLyrics === null ? (
+        <p><button onClick={() => setFullLyrics('')}>📋 Pegar la letra entera</button></p>
+      ) : (
+        <div className="full-lyrics">
+          <label className="field">
+            Letra de toda la canción (mejor una línea por frase)
+            <textarea rows={6} value={fullLyrics} onChange={(e) => setFullLyrics(e.target.value)} aria-label="Letra de toda la canción" />
+          </label>
+          <p className="version-buttons">
+            <button
+              className="primary"
+              disabled={!fullLyrics.trim()}
+              onClick={() => {
+                apply((s) => setSongLyrics(s, fullLyrics));
+                setFullLyrics(null);
+              }}
+            >
+              Repartir en las {phrases.length} frases
+            </button>
+            <button className="link" onClick={() => setFullLyrics(null)}>Cancelar</button>
+          </p>
+          <p className="hint">Se cuentan las sílabas de cada palabra y se reparten según las notas de cada frase, cortando donde pusiste saltos de línea. Luego puedes retocar cada frase.</p>
+        </div>
+      )}
 
       <ol className="phrase-list editor-list">
         {phrases.map((p, i) => {
           const plan = phrasePlan(p);
           const value = texts[p.phrase.id] ?? (hasLyrics(p.phrase) ? p.phrase.lyrics : '');
           const n = p.phrase.notes.length;
+          const open = notesOf?.phraseId === p.phrase.id;
+          const sel = open ? notesOf!.note : null;
           return (
             <li key={p.phrase.id}>
               <span className="phrase-num">Frase {i + 1}</span>
@@ -83,6 +128,9 @@ export function SongEditor({ song, onDone }: { song: Song; onDone: () => void })
               <span className="editor-actions">
                 <button className="small" onClick={() => apply((s) => shiftPhraseOctave(s, p.phrase.id, 12))} aria-label={`Frase ${i + 1} una octava más aguda`}>Octava ↑</button>
                 <button className="small" onClick={() => apply((s) => shiftPhraseOctave(s, p.phrase.id, -12))} aria-label={`Frase ${i + 1} una octava más grave`}>Octava ↓</button>
+                <button className="small" aria-expanded={open} onClick={() => setNotesOf(open ? null : { phraseId: p.phrase.id, note: null })} aria-label={`Notas de la frase ${i + 1}`}>
+                  Notas
+                </button>
                 {n >= 4 && (
                   <button className="small" onClick={() => apply((s) => splitPhrase(s, p.phrase.id, naturalSplitPoint(p.phrase)))} aria-label={`Dividir la frase ${i + 1}`}>Dividir</button>
                 )}
@@ -93,6 +141,36 @@ export function SongEditor({ song, onDone }: { song: Song; onDone: () => void })
                   <button className="small link" onClick={() => apply((s) => deletePhrase(s, p.phrase.id))} aria-label={`Borrar la frase ${i + 1}`}>Borrar</button>
                 )}
               </span>
+              {open && (
+                <div className="note-editor">
+                  <div className="note-chips" role="group" aria-label={`Notas de la frase ${i + 1}`}>
+                    {p.phrase.notes.map((note, k) => (
+                      <button
+                        key={k}
+                        className={`note-chip ${sel === k ? 'selected' : ''}`}
+                        aria-pressed={sel === k}
+                        aria-label={`Nota ${k + 1}: ${solfegeName(note.midi)}${note.syllable.trim() ? `, «${note.syllable.trim()}»` : ''}`}
+                        onClick={() => {
+                          setNotesOf({ phraseId: p.phrase.id, note: k });
+                          void audioEngine.playReference(note.midi, 0.5);
+                        }}
+                      >
+                        <span>{note.syllable.trim() || '·'}</span>
+                        <small>{solfegeName(note.midi)}</small>
+                      </button>
+                    ))}
+                  </div>
+                  {sel !== null && p.phrase.notes[sel] && (
+                    <p className="version-buttons">
+                      <button className="small" onClick={() => { apply((s) => shiftNote(s, p.phrase.id, sel, 1)); void audioEngine.playReference(p.phrase.notes[sel].midi + 1, 0.5); }}>Más aguda ↑</button>
+                      <button className="small" onClick={() => { apply((s) => shiftNote(s, p.phrase.id, sel, -1)); void audioEngine.playReference(p.phrase.notes[sel].midi - 1, 0.5); }}>Más grave ↓</button>
+                      {n > 1 && (
+                        <button className="small link" onClick={() => { apply((s) => deleteNote(s, p.phrase.id, sel)); setNotesOf({ phraseId: p.phrase.id, note: null }); }}>Borrar nota</button>
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
             </li>
           );
         })}

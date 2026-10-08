@@ -23,7 +23,8 @@ _Última actualización: 2026-10-07 · versión 0.2.0 + Fases 4–9 (sin publica
 - Fase 8b: archivos de melodía (UltraStar, MIDI/.kar, MusicXML/.mxl) con letra, canción entera tipo karaoke (con guía o con el original fuera de la app) y calibración de sincronía.
 - Fase 8c: separación de voz **en el navegador** (HT-Demucs FT en ONNX, WebGPU/WASM, opcional, modelo de 166 MB bajo demanda) y edición de canciones importadas (título, letra, octava, unir, dividir, borrar). Ayuda cuando la banda tapa la voz (68 % → 90 %), empeora la voz grave de prueba (73 % → 63 %): por eso no va por defecto.
 - Fase 9: voz sintética por formantes que canta la letra (botón «Escúchala cantada» y ajuste «Que la guía cante la letra»), multi-IA e ideas de interpretación por frase con IA. Los peldaños 2–3 del ADR-008 (canto con IA, voz del usuario) siguen pendientes.
-- Web: 272 tests unitarios y 30 E2E (+ la medición de separación, que se omite sin el modelo en `web/.models/`). API: 49 tests (10 de integración necesitan Docker). Dos workflows de CI (`web.yml` y `api.yml`).
+- Letra automática: sílabas del español sin guiones, «Pegar la letra entera» en el editor y edición de notas sueltas.
+- Web: 299 tests unitarios y 31 E2E (+ la medición de separación, que se omite sin el modelo en `web/.models/`). API: 49 tests (10 de integración necesitan Docker). Dos workflows de CI (`web.yml` y `api.yml`).
 
 ## Siguiente
 1. Medir en dispositivos reales (checklist en `docs/benchmarks/README.md`).
@@ -35,7 +36,7 @@ _Última actualización: 2026-10-07 · versión 0.2.0 + Fases 4–9 (sin publica
 5. Desplegar la API y la web (decidir proveedor), configurar `VITE_API_URL` y enviar las cabeceras COOP/COEP (hilos para la separación); después, la fase 9 (demostraciones cantadas con IA).
 
 ## Preguntas abiertas
-- IA: ya hay multi-IA (Groq, Gemini, Grok) en la web y en el servidor. ¿Siguiente: letra automática para canciones importadas (caso B) o el peldaño 2 del ADR-008 (canto con IA)?
+- IA: ya hay multi-IA (Groq, Gemini, Grok) en la web y en el servidor, y la letra de las importadas se reparte sin IA. ¿Siguiente: el peldaño 2 del ADR-008 (canto con IA)?
 - ¿La voz sintética que canta la letra ayuda o molesta? (escuchar la muestra y probarla con alumnos).
 - ¿Confirmar que Dapper se quiere para las consultas del backend? Se interpretó que sí.
 - ¿Te encaja el camino de 10 días propuesto (`core/progress/path.ts`)?

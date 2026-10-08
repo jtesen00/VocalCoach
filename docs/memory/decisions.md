@@ -2,6 +2,10 @@
 
 Formato: fecha · decisión · motivo · referencia. Lo más reciente arriba.
 
+## 2026-10-07 · Letra automática
+- **La letra se reparte sin IA:** separación en sílabas del español por reglas y reparto por programación dinámica. · Gratis, sin conexión y predecible; cubre el caso B de la investigación de IA.
+- **Editar notas sueltas solo en altura** (subir, bajar, borrar); la duración, si hace falta, después.
+
 ## 2026-10-07 · Fase 9
 - **Demostraciones cantadas: primero una voz por formantes en el dispositivo**, no un modelo de IA. · Gratis, privada, sin conexión y sin licencias de voces; basta para enseñar dónde va cada sílaba. · ADR-008, [fase-09](../planning/fase-09-demostraciones-cantadas.md).
 - **La guía cantada va desactivada por defecto** (suena a robot); se ofrece con un botón en cada frase y un ajuste.

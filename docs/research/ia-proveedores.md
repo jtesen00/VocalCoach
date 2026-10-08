@@ -79,4 +79,5 @@ La detección de pitch, la evaluación, el profesor, las recomendaciones de tono
   - Grok: el rápido sin razonamiento;
   - Groq: lista de preferidos.
 - **Usos:** el profe que explica el intento (caso A) e ideas de interpretación por frase («¿Cómo la canto?», Fase 9). Solo texto.
+- **Caso B (letra para canciones importadas): resuelto sin IA.** Basta con separar las sílabas por reglas del español y repartirlas con programación dinámica (editor → «Pegar la letra entera»). Es gratis, funciona sin conexión y es predecible. Una IA solo aportaría en casos raros.
 - **Pendiente:** probar con claves reales de Gemini y Grok, sobre todo el CORS desde el navegador en producción. En desarrollo pasan por el servidor de Vite (`/gemini`, `/xai`).

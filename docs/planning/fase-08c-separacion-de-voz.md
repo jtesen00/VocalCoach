@@ -47,4 +47,4 @@
 - Medir con MP3 reales del usuario (puerta de salida: melodía utilizable sin edición en ≥ 70 % de las canciones de prueba).
 - Medir velocidad y memoria con WebGPU y en móviles (el modelo necesita ~1 GB de RAM).
 - Enviar COOP/COEP en el hosting de producción (para usar varios hilos sin GPU).
-- Editar notas sueltas (altura y duración) si la edición por frases no basta.
+- ~~Editar notas sueltas~~ Hecho: subir, bajar y borrar notas. Falta cambiar la duración, si hace falta.

@@ -1,4 +1,5 @@
 import { secondsPerBeat } from './melody';
+import { fitSyllables, syllabifyText, syllabifyWord } from './syllables';
 import { phraseTimeLabel } from './transcribe';
 import type { MelodyNote, Song, SongPhrase } from './types';
 
@@ -62,23 +63,14 @@ export function renameSong(song: Song, title: string): Song {
 }
 
 /**
- * Letra → sílabas de las notas. Las sílabas se separan con espacios o guiones ("a-mor mí-o").
+ * Letra → sílabas de las notas. Las palabras se separan solas en sílabas; los guiones que
+ * escriba el usuario mandan («a-mor»).
  * - Con tantas sílabas como notas, una por nota.
- * - Con menos, cada sílaba empieza en la nota proporcional a su posición y las notas
- *   intermedias quedan sin texto (se alarga la sílaba anterior, como un melisma).
- * - Con más, las que sobran se juntan en la última nota.
+ * - Si sobran, se unen las sinalefas («de_es») y, si aún sobran, las últimas en la última nota.
+ * - Si faltan, cada sílaba empieza en la nota proporcional y las demás alargan la anterior (melisma).
  */
 export function distributeLyrics(text: string, noteCount: number): string[] {
-  const syl = text.split(/[\s-]+/).filter(Boolean);
-  const out = new Array<string>(noteCount).fill('');
-  if (!syl.length || !noteCount) return out;
-  if (syl.length >= noteCount) {
-    for (let i = 0; i < noteCount - 1; i++) out[i] = syl[i];
-    out[noteCount - 1] = syl.slice(noteCount - 1).join(' ');
-    return out;
-  }
-  syl.forEach((s, i) => (out[Math.floor((i * noteCount) / syl.length)] = s));
-  return out;
+  return fitSyllables(syllabifyText(text), noteCount);
 }
 
 /** Cambia la letra de una frase. Una letra vacía deja la frase sin letra. */
@@ -89,7 +81,7 @@ export function setPhraseLyrics(song: Song, phraseId: string, text: string): Son
   const clean = text.replace(/\s+/g, ' ').trim();
   const syllables = distributeLyrics(clean, phrase.notes.length);
   phrase.notes.forEach((n, i) => (n.syllable = syllables[i]));
-  phrase.lyrics = clean.replace(/-/g, '');
+  phrase.lyrics = clean.replace(/-/g, '').replace(/_/g, ' ');
   return out;
 }
 
@@ -178,4 +170,98 @@ export function naturalSplitPoint(phrase: SongPhrase): number {
     }
   }
   return best;
+}
+
+/**
+ * Letra completa de la canción → letra de cada frase. Se cuentan las sílabas de cada palabra y
+ * se reparten las palabras entre las frases (en orden, sin partir palabras) con programación
+ * dinámica: cada frase debería recibir tantas sílabas como notas tiene, y se prefiere cortar
+ * donde el usuario puso un salto de línea. Con tantas líneas como frases, una línea por frase.
+ */
+export function splitSongLyrics(text: string, noteCounts: readonly number[]): string[] {
+  const lines = text.split(/\r?\n/).map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const K = noteCounts.length;
+  if (!K) return [];
+  if (lines.length === K) return lines;
+  const words: { text: string; syl: number; lineEnd: boolean }[] = [];
+  for (const line of lines) {
+    const ws = line.split(' ');
+    ws.forEach((w, i) => words.push({ text: w, syl: w.includes('-') ? w.split('-').filter(Boolean).length : syllabifyWord(w).length, lineEnd: i === ws.length - 1 }));
+  }
+  const W = words.length;
+  if (!W) return new Array<string>(K).fill('');
+  // cost[k][i]: mejor coste repartiendo las palabras [0, i) entre las frases [0, k).
+  const INF = Number.POSITIVE_INFINITY;
+  const cost = Array.from({ length: K + 1 }, () => new Array<number>(W + 1).fill(INF));
+  const from = Array.from({ length: K + 1 }, () => new Array<number>(W + 1).fill(0));
+  cost[0][0] = 0;
+  for (let k = 1; k <= K; k++) {
+    for (let j = 0; j <= W; j++) {
+      let syl = 0;
+      for (let i = j; i >= 0; i--) {
+        if (i < j) syl += words[i].syl;
+        if (cost[k - 1][i] === INF) continue;
+        const target = noteCounts[k - 1];
+        // Frase vacía: muy mal (salvo que no queden palabras). Cortar fuera de un final de línea: penaliza.
+        const fill = syl === 0 ? (j < W ? 50 : 4) : (syl - target) ** 2;
+        const cut = j > 0 && j < W && !words[j - 1].lineEnd ? 3 : 0;
+        const c = cost[k - 1][i] + fill + cut;
+        if (c < cost[k][j]) {
+          cost[k][j] = c;
+          from[k][j] = i;
+        }
+        if (syl > 3 * target + 6) break;
+      }
+    }
+  }
+  const out = new Array<string>(K).fill('');
+  for (let k = K, j = W; k > 0; k--) {
+    const i = from[k][j];
+    out[k - 1] = words.slice(i, j).map((w) => w.text).join(' ');
+    j = i;
+  }
+  return out;
+}
+
+/** Aplica la letra completa a todas las frases de la canción. */
+export function setSongLyrics(song: Song, text: string): Song {
+  const refs = song.sections.flatMap((sec) => sec.phrases);
+  const parts = splitSongLyrics(text, refs.map((p) => p.notes.length));
+  return refs.reduce((acc, p, k) => setPhraseLyrics(acc, p.id, parts[k] ?? ''), song);
+}
+
+/** Sube o baja una nota (en semitonos). */
+export function shiftNote(song: Song, phraseId: string, noteIndex: number, semitones: number): Song {
+  const out = clone(song);
+  const { s, p } = findPhrase(out, phraseId);
+  const n = out.sections[s].phrases[p].notes[noteIndex];
+  if (n) n.midi += semitones;
+  return out;
+}
+
+/** Borra una nota: su tiempo pasa a ser silencio antes de la siguiente (la frase no se mueve). */
+export function deleteNote(song: Song, phraseId: string, noteIndex: number): Song {
+  const out = clone(song);
+  const { s, p } = findPhrase(out, phraseId);
+  const phrase = out.sections[s].phrases[p];
+  if (phrase.notes.length <= 1 || !phrase.notes[noteIndex]) return song;
+  const [gone] = phrase.notes.splice(noteIndex, 1);
+  const next = phrase.notes[noteIndex];
+  if (noteIndex === 0) {
+    // La frase empieza más tarde: se desplaza su origen en lugar de dejar un silencio inicial.
+    const spb = secondsPerBeat(out);
+    if (phrase.originS !== undefined) phrase.originS += ((gone.restBefore ?? 0) + gone.beats + (next.restBefore ?? 0)) * spb;
+    next.restBefore = 0;
+  } else if (next) {
+    next.restBefore = (next.restBefore ?? 0) + (gone.restBefore ?? 0) + gone.beats;
+  }
+  // La sílaba no se pierde: pasa a la siguiente si esa no tiene (melisma); si no, se junta a la anterior.
+  const syl = gone.syllable.trim();
+  if (syl) {
+    const prev = phrase.notes[noteIndex - 1];
+    if (next && !next.syllable.trim()) next.syllable = syl;
+    else if (prev) prev.syllable = `${prev.syllable.trim()} ${syl}`.trim();
+    else if (next) next.syllable = `${syl} ${next.syllable.trim()}`.trim();
+  }
+  return out;
 }

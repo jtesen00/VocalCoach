@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deletePhrase, distributeLyrics, mergeWithNext, naturalSplitPoint, renameSong, setPhraseLyrics, shiftPhraseOctave, splitLyricsAt, splitPhrase } from './edit';
+import { deleteNote, deletePhrase, distributeLyrics, setSongLyrics, shiftNote, splitSongLyrics, mergeWithNext, naturalSplitPoint, renameSong, setPhraseLyrics, shiftPhraseOctave, splitLyricsAt, splitPhrase } from './edit';
 import { allPhrases, phrasePlan } from './melody';
 import { notesToSong } from './transcribe';
 import type { Song } from './types';
@@ -94,5 +94,41 @@ describe('editar canciones importadas', () => {
     const p = allPhrases(imported())[0].phrase;
     const withBreath = { ...p, notes: p.notes.map((n, i) => (i === 3 ? { ...n, restBefore: 0.6 } : n)) };
     expect(naturalSplitPoint(withBreath)).toBe(3);
+  });
+
+  it('la letra sin guiones se separa sola en sílabas', () => {
+    expect(distributeLyrics('Luz de puerto', 4)).toEqual(['Luz', 'de', 'puer', 'to']);
+  });
+
+  it('letra entera: una línea por frase si coinciden', () => {
+    expect(splitSongLyrics('Luz de puerto\n\nya me voy\n', [4, 4])).toEqual(['Luz de puerto', 'ya me voy']);
+  });
+
+  it('letra entera sin saltos de línea: se reparte por sílabas sin partir palabras', () => {
+    // 4 + 4 notas; «Luz de puer-to» y «ya me va-mos» (4 y 4 sílabas).
+    expect(splitSongLyrics('Luz de puerto ya me vamos', [4, 4])).toEqual(['Luz de puerto', 'ya me vamos']);
+    // Con los cortes del usuario cerca de lo ideal, se respetan.
+    expect(splitSongLyrics('Luz de puerto ya\nme vamos', [4, 4])).toEqual(['Luz de puerto ya', 'me vamos']);
+  });
+
+  it('aplica la letra entera a todas las frases', () => {
+    const song = setSongLyrics(imported(), 'Luz de puerto\nya me voy');
+    expect(allPhrases(song).map((r) => r.phrase.lyrics)).toEqual(['Luz de puerto', 'ya me voy']);
+    expect(allPhrases(song)[1].phrase.notes.map((n) => n.syllable)).toEqual(['ya', 'me', 'voy', '']);
+  });
+
+  it('subir, bajar y borrar notas sueltas sin mover el resto de la frase', () => {
+    const song = setPhraseLyrics(imported(), 'p1', 'Luz de puer-to');
+    expect(allPhrases(shiftNote(song, 'p1', 1, 1))[0].phrase.notes[1].midi).toBe(63);
+    const before = phrasePlan(allPhrases(song)[0]).segments;
+    const after = phrasePlan(allPhrases(deleteNote(song, 'p1', 1))[0]).segments;
+    expect(after.length).toBe(3);
+    expect(after[1].startS).toBeCloseTo(before[2].startS, 6); // «puer» sigue en su sitio
+    // La sílaba borrada se junta a la anterior.
+    expect(allPhrases(deleteNote(song, 'p1', 1))[0].phrase.notes[0].syllable).toBe('Luz de');
+    // Borrar la primera retrasa el inicio de la frase.
+    const first = allPhrases(deleteNote(song, 'p1', 0))[0].phrase;
+    expect(first.originS).toBeCloseTo(10.5, 6);
+    expect(first.notes[0].syllable).toBe('Luz de');
   });
 });
