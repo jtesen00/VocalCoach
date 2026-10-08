@@ -10,4 +10,5 @@
 | [006](ADR-006-offline.md) | Offline | Aceptado |
 | [007](ADR-007-mobile.md) | Móvil | Aceptado |
 | [008](ADR-008-ai-audio.md) | Audio con IA | Propuesto |
-| [009](ADR-009-song-import.md) | Importación de canciones (karaoke) | Aceptado |
+| [009](ADR-009-song-import.md) | Importación de canciones (karaoke) | Aceptado (revisado) |
+| [010](ADR-010-song-training.md) | Entrenamiento por canción | Aceptado |

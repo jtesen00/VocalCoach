@@ -1,17 +1,38 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { audioEngine } from '../audio/engine';
+import { ExercisesPage } from '../features/exercises/ExercisesPage';
 import { RangeCalibration } from '../features/range/RangeCalibration';
+import { SongsPage } from '../features/songs/SongsPage';
+import { SettingsPage } from '../features/settings/SettingsPage';
 import { TunerPage } from '../features/tuner/TunerPage';
+import { ProgressPage } from '../features/progress/ProgressPage';
+import { UpdateBanner, useOnline } from './pwa';
+import { startAutoSync } from '../shared/account';
 import { useEngineSnapshot } from '../features/tuner/useEngine';
+import { recordCalibration } from '../core/profile/vocal-profile';
+import { profileStore } from '../shared/profile-store';
 import { useSettings } from '../shared/settings';
 
-type View = 'tuner' | 'range';
+type View = 'exercises' | 'songs' | 'tuner' | 'range' | 'progress' | 'settings';
 
 export function App() {
   const [settings, updateSettings] = useSettings();
-  const [view, setView] = useState<View>(settings.range ? 'tuner' : 'range');
+  const [view, setView] = useState<View>(settings.range ? 'exercises' : 'range');
   const snapshot = useEngineSnapshot();
   const running = snapshot.status === 'running';
+  const online = useOnline();
+
+  useEffect(() => void audioEngine.setInstrument(settings.instrument), [settings.instrument]);
+  useEffect(() => {
+    if (settings.latencyMs !== null) audioEngine.setCalibratedLatency(settings.latencyMs / 1000);
+  }, [settings.latencyMs]);
+  // Cuenta opcional: sube y trae intentos en segundo plano.
+  useEffect(() => startAutoSync(), []);
+
+  // Quien midió su voz antes de existir el perfil vocal: se usa esa medición como punto de partida.
+  useEffect(() => {
+    if (settings.range && !profileStore.get().calibrated) profileStore.update((p) => recordCalibration(p, settings.range!));
+  }, [settings.range]);
 
   const start = async () => {
     await audioEngine.start();
@@ -24,8 +45,18 @@ export function App() {
         <h1>Vocal Coach</h1>
         {running && (
           <nav aria-label="Secciones">
-            <button aria-current={view === 'tuner' ? 'page' : undefined} onClick={() => setView('tuner')}>Afinador</button>
-            <button aria-current={view === 'range' ? 'page' : undefined} onClick={() => setView('range')}>Mi rango</button>
+            {(
+              [
+                ['exercises', 'Practicar'],
+                ['songs', 'Canciones'],
+                ['tuner', 'Canta libre'],
+                ['range', 'Mi voz'],
+                ['progress', 'Progreso'],
+                ['settings', 'Ajustes'],
+              ] as const
+            ).map(([id, label]) => (
+              <button key={id} aria-current={view === id ? 'page' : undefined} onClick={() => setView(id)}>{label}</button>
+            ))}
           </nav>
         )}
         <div className={`mic ${running ? 'on' : ''}`} role="status">
@@ -35,18 +66,21 @@ export function App() {
         </div>
       </header>
 
+      <UpdateBanner />
+      {!online && <p className="notice" role="status">Sin conexión: puedes practicar igual; solo el profe con IA necesita internet.</p>}
       {running && snapshot.diagnostics?.bluetooth.suspected && (
         <p className="notice warn" role="alert">
-          Parece que usas un micrófono Bluetooth ({snapshot.diagnostics.bluetooth.reason}). Los micrófonos Bluetooth reducen
-          la calidad y añaden 150–300 ms de retraso. Para practicar usa el micrófono del dispositivo o auriculares con cable.
+          Parece que usas auriculares o un micrófono Bluetooth. Con Bluetooth la voz llega con retraso y peor calidad, y las correcciones
+          pueden fallar. Para practicar usa el micrófono del móvil u ordenador, o auriculares con cable.
+          {settings.showDetails && ` (${snapshot.diagnostics.bluetooth.reason})`}
         </p>
       )}
 
       <main>
         {!running ? (
           <section className="welcome">
-            <h2>Canta y mira tu afinación al instante</h2>
-            <p>Vocal Coach escucha tu voz, detecta la nota que cantas y te dice si estás alto, bajo o en el centro.</p>
+            <h2>Aprende a cantar afinado</h2>
+            <p>Canta y verás al instante si tienes que subir o bajar. Con ejercicios cortos, a tu ritmo y adaptados a tu voz.</p>
             <ul>
               <li><strong>Privado:</strong> el audio se analiza en tu dispositivo y no se envía a ningún servidor.</li>
               <li><strong>Mejor sin Bluetooth:</strong> usa el micrófono del dispositivo o auriculares con cable.</li>
@@ -59,8 +93,24 @@ export function App() {
           </section>
         ) : view === 'tuner' ? (
           <TunerPage settings={settings} updateSettings={updateSettings} onCalibrate={() => setView('range')} />
+        ) : view === 'exercises' ? (
+          <ExercisesPage settings={settings} updateSettings={updateSettings} onCalibrate={() => setView('range')} />
+        ) : view === 'songs' ? (
+          <SongsPage settings={settings} updateSettings={updateSettings} onMeasure={() => setView('range')} />
+        ) : view === 'progress' ? (
+          <ProgressPage settings={settings} />
+        ) : view === 'settings' ? (
+          <SettingsPage settings={settings} updateSettings={updateSettings} onMeasureVoice={() => setView('range')} />
         ) : (
-          <RangeCalibration range={settings.range} onSave={(range) => updateSettings({ range })} onDone={() => setView('tuner')} />
+          <RangeCalibration
+            range={settings.range}
+            detailed={settings.showDetails}
+            onSave={(range) => {
+              updateSettings({ range });
+              profileStore.update((p) => recordCalibration(p, range));
+            }}
+            onDone={() => setView('exercises')}
+          />
         )}
       </main>
     </div>

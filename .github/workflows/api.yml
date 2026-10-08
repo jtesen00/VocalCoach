@@ -1,0 +1,24 @@
+name: api
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ['api/**', '.github/workflows/api.yml']
+
+defaults:
+  run:
+    working-directory: api
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: api/global.json
+      - run: dotnet restore VocalCoach.slnx
+      - run: dotnet build VocalCoach.slnx --no-restore -c Release
+      # Unitarios, arquitectura e integración (PostgreSQL real con Testcontainers; Docker viene en el runner).
+      - run: dotnet test --solution VocalCoach.slnx --no-build -c Release

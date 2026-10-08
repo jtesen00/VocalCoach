@@ -1,0 +1,47 @@
+# Aprendizajes técnicos
+
+- **npm 10.9 falla** con `Cannot read properties of null (reading 'edgesOut')` al resolver los peers opcionales de Vitest 4. Se usa **pnpm** (`packageManager` en `package.json`; esbuild en `onlyBuiltDependencies`).
+- **`performance.now()` no existe dentro del AudioWorklet en Chromium**, así que el tiempo de cómputo del detector no se puede medir en el navegador. Se mide con `pnpm bench` (~0,35 ms por estimación en servidor).
+- **TypeScript no trae `lib` de AudioWorklet**: en `pitch-worklet.ts` se declaran a mano `sampleRate`, `currentTime`, `registerProcessor` y `AudioWorkletProcessor`. El worklet se empaqueta con `import url from './pitch-worklet.ts?worker&url'`.
+- **El nodo del worklet debe conectarse a la salida** (a través de una ganancia 0) para que el grafo lo procese.
+- **`setTimeout` y el reloj de audio derivan unos ms**: las esperas sobre tiempos de audio deben reintentar hasta que `ctx.currentTime` alcance el objetivo, nunca suponer que el timer acierta.
+- **Cada AudioContext empieza en t = 0**: hay que reiniciar los instantes guardados (como la supresión del micro) al recrearlo.
+- **Plegar octavas punto a punto es ambiguo a un tritono**: en las sirenas se usa un único desplazamiento de octava calculado con la mediana.
+- **Media ventana de latencia:** los frames se fechan al final de la ventana (2048 muestras ≈ 43 ms); al evaluar hay que restar media ventana más la latencia de entrada.
+- **Playwright local:** usar `@playwright/test@1.56.1`, que coincide con el Chromium preinstalado (`/opt/pw-browsers`, build 1194). En CI se instala con `playwright install`.
+- **Con vibrato, el error instantáneo frente a la referencia es de ~12 c (MPM)**: lo causa el promediado de la ventana y la mediana. Por eso se evalúa la mediana del intento, no frames sueltos.
+- **Memoizar objetos derivados que alimentan planes**: `allPhrases(song)[i]` crea un objeto nuevo en cada render; si entra en las dependencias de `useMemo`, el plan cambia y `useExerciseRun` se reinicia (el botón Empezar "no hace nada").
+- **Coma flotante en duraciones**: 4,8 − 3,6 = 1,1999…; las comparaciones de "nota larga" usan tolerancia (`isLong`).
+- **Una frase repite notas**: para "intentos distintos" se cuenta una vez por evaluación (`NoteStat.seen`), no por aparición.
+- **Estable pero desafinado no es éxito**: la estabilidad solo pondera lo acertado.
+- **Transcripción a 16 kHz** (ventana 1024, salto 256): una canción de 4 minutos se analiza en pocos segundos en un Web Worker. `OfflineAudioContext` decodifica, mezcla a mono, remuestrea y filtra en un paso.
+- **Monofónico ≠ polifónico:** MPM/YIN sirven para una sola voz (micrófono); en una mezcla hacen falta saliencia armónica, contornos y voicing (Melodia).
+- **Suboctava en la suma armónica:** los armónicos pares de la nota real votan por la octava inferior; se corrige exigiendo apoyo de armónicos impares.
+- **Los armónicos del bajo están centrados** como la voz (el 6.º de un Do2 es un Sol4); se distinguen porque decaen tras el ataque. El decaimiento se mide al **principio** del contorno, porque un contorno puede fundir la voz con la cola de un instrumento en la misma nota.
+- **El voicing de Melodia (μ − 0,2σ) está pensado para mezclas:** con voz sola descarta notas buenas; se usa un umbral relativo a los contornos más fuertes.
+- **`Math.max(...array)` con cientos de miles de elementos desborda la pila:** usar un bucle.
+- **Acordes relativos** (Fa/Lam, Do/Mim) comparten dos notas: el cromagrama del **bajo** los distingue. Los bajos llegan a 41 Hz: si la banda empieza en 55 Hz, solo se ve su 3.er armónico (otra nota).
+- **Redondear la clase de altura antes del módulo**: `round(x) % 12`, no `round(x % 12)` (que puede dar 12).
+- **Un extractor de voz descarta a propósito sonidos que decaen** (piano): no sirve para validar una demo de piano. Cada cosa se valida con su herramienta.
+- **`OfflineAudioContext` en Playwright** permite renderizar y verificar audio sintetizado en tests E2E.
+- **Las muestras GM derivan de afinación** (silbido y flauta, hasta 30 c en el ataque y ±15 c después): para una guía de afinación se corrigen nota a nota, re-muestreando con velocidad variable según el f0 medido. El vibrato se añade luego, de forma controlada.
+- **Bucle de una nota afinada = número entero de periodos.** Si no, el fundido cruzado mezcla dos tramos desfasados y se oye un batido.
+- **Un AudioBuffer sirve en cualquier contexto:** las muestras se decodifican una vez en un `OfflineAudioContext` propio, antes de pedir el micrófono, y se reutilizan en el contexto en vivo y en los renders de test.
+- **Medir con mezclas realistas cambia las conclusiones:** con tonos sintéticos la extracción daba un 92–100 %; con instrumentos grabados y un cantante "humano", un 37–85 %. Los fallos eran tres:
+  - la máscara de centro al cubo borraba la voz con reverb;
+  - la regla "decae tras el ataque" mataba notas cantadas con ataque fuerte;
+  - el bajo centrado ganaba a la voz.
+- **Basic Pitch no es un extractor de melodía:** detecta todas las notas (polifónico), así que como saliencia sigue al acompañamiento. Además, en CPU (sin WebGL) tarda ~1× tiempo real.
+- **.NET 10 y `dotnet test`:** con xunit v3 hay que usar Microsoft.Testing.Platform (`"test": { "runner": "Microsoft.Testing.Platform" }` en `global.json`). VSTest ya no está soportado.
+- **Dapper con PostgreSQL:** `DefaultTypeMap.MatchNamesWithUnderscores = true` para snake_case y un `TypeHandler<DateOnly>`. Para leer una columna `date` se usa `ReadAsync<DateOnly>()`, no `DateTime`.
+- **NetArchTest puede pasar en vacío** si no ve las dependencias: hay un test de control que exige que una dependencia conocida se detecte.
+- **Matar la API local:** `pkill -f VocalCoach.Api` también mata la propia shell (su línea de comandos lo contiene). Usar `fuser -k 5080/tcp`.
+- **ONNX Runtime Web con pesos fp16 y optimización del grafo:** `std::bad_alloc` al crear la sesión (al plegar las conversiones fp16 → fp32 se duplica la memoria en WASM, límite de 4 GB). Con `graphOptimizationLevel: 'disabled'` funciona y apenas cambia la velocidad.
+- **El `.wasm` de ORT con Vite:** excluir `onnxruntime-web` de `optimizeDeps` e importar el wasm con `?url` (`ort.env.wasm.wasmPaths = { wasm: url }`). Si no, el servidor devuelve el `index.html` y falla con «expected magic word 00 61 73 6d».
+- **Demucs no reconoce una «voz» sintética** (tonos armónicos): para medir la separación hace falta voz grabada (`dev/real-mix.ts`), no `test-mix.ts`.
+- **Medir con Playwright mientras se edita `src/`:** Vite recarga la página y el `page.evaluate` largo muere («Execution context was destroyed»). Para mediciones largas, ejecutar desde una copia del código.
+- **Gemini y Grok hablan «OpenAI»:** Gemini en `…/v1beta/openai/` (los ids de `/models` llevan el prefijo `models/`), Grok en `api.x.ai/v1`. Un solo cliente sirve para los tres proveedores.
+- **Los tests `src/**/*.test.ts` se compilan con `tsconfig.node.json`** (sin DOM ni tipos de Vite): la lógica que se quiera testear debe vivir en `core/`.
+- **Voz por formantes:** con la nota más aguda que F1, la fundamental queda fuera del formante y la voz se apaga. Se sube F1 hasta la fundamental, como hacen los cantantes.
+- **Docker no siempre está arrancado en local:** los tests de integración del API (Testcontainers) fallan con «Failed to connect to Docker endpoint»; los demás se ejecutan igual y el CI sí tiene Docker.
+- **Heredocs largos en el Bash de Windows** a veces fallan con «unexpected EOF while looking for matching `''»: mejor escribir el script a un archivo y ejecutarlo.

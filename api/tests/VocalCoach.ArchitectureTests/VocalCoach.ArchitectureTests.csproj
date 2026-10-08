@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.Rules" />
+    <ProjectReference Include="../../src/Modules/Identity/VocalCoach.Modules.Identity.Domain/VocalCoach.Modules.Identity.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Identity/VocalCoach.Modules.Identity.Application/VocalCoach.Modules.Identity.Application.csproj" />
+    <ProjectReference Include="../../src/Modules/Identity/VocalCoach.Modules.Identity.Infrastructure/VocalCoach.Modules.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Modules/Identity/VocalCoach.Modules.Identity.Presentation/VocalCoach.Modules.Identity.Presentation.csproj" />
+    <ProjectReference Include="../../src/Modules/Identity/VocalCoach.Modules.Identity.IntegrationEvents/VocalCoach.Modules.Identity.IntegrationEvents.csproj" />
+    <ProjectReference Include="../../src/Modules/Practice/VocalCoach.Modules.Practice.Domain/VocalCoach.Modules.Practice.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Practice/VocalCoach.Modules.Practice.Application/VocalCoach.Modules.Practice.Application.csproj" />
+    <ProjectReference Include="../../src/Modules/Practice/VocalCoach.Modules.Practice.Infrastructure/VocalCoach.Modules.Practice.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Modules/Practice/VocalCoach.Modules.Practice.Presentation/VocalCoach.Modules.Practice.Presentation.csproj" />
+    <ProjectReference Include="../../src/Modules/Practice/VocalCoach.Modules.Practice.IntegrationEvents/VocalCoach.Modules.Practice.IntegrationEvents.csproj" />
+    <ProjectReference Include="../../src/Modules/Progress/VocalCoach.Modules.Progress.Domain/VocalCoach.Modules.Progress.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Progress/VocalCoach.Modules.Progress.Application/VocalCoach.Modules.Progress.Application.csproj" />
+    <ProjectReference Include="../../src/Modules/Progress/VocalCoach.Modules.Progress.Infrastructure/VocalCoach.Modules.Progress.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Modules/Progress/VocalCoach.Modules.Progress.Presentation/VocalCoach.Modules.Progress.Presentation.csproj" />
+    <ProjectReference Include="../../src/Modules/Coach/VocalCoach.Modules.Coach.Application/VocalCoach.Modules.Coach.Application.csproj" />
+    <ProjectReference Include="../../src/Modules/Coach/VocalCoach.Modules.Coach.Infrastructure/VocalCoach.Modules.Coach.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Modules/Coach/VocalCoach.Modules.Coach.Presentation/VocalCoach.Modules.Coach.Presentation.csproj" />
+  </ItemGroup>
+</Project>

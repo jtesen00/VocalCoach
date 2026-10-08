@@ -21,6 +21,14 @@ export function noteName(midi: number): string {
   return `${NOTE_NAMES[pitchClass]}${octave}`;
 }
 
+const SOLFEGE_NAMES = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'] as const;
+
+/** Nombre en solfeo sin octava, para la interfaz sencilla: 60 → "Do". */
+export function solfegeName(midi: number): string {
+  const n = Math.round(midi);
+  return SOLFEGE_NAMES[((n % 12) + 12) % 12];
+}
+
 /** "C4", "F#3", "Bb2" → MIDI entero. */
 export function parseNote(name: string): number {
   const m = /^([A-Ga-g])([#b]?)(-?\d+)$/.exec(name.trim());

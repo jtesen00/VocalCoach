@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <UserSecretsId>vocalcoach-api</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <ProjectReference Include="../Modules/Identity/VocalCoach.Modules.Identity.Infrastructure/VocalCoach.Modules.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="../Modules/Identity/VocalCoach.Modules.Identity.Presentation/VocalCoach.Modules.Identity.Presentation.csproj" />
+    <ProjectReference Include="../Modules/Practice/VocalCoach.Modules.Practice.Infrastructure/VocalCoach.Modules.Practice.Infrastructure.csproj" />
+    <ProjectReference Include="../Modules/Practice/VocalCoach.Modules.Practice.Presentation/VocalCoach.Modules.Practice.Presentation.csproj" />
+    <ProjectReference Include="../Modules/Progress/VocalCoach.Modules.Progress.Infrastructure/VocalCoach.Modules.Progress.Infrastructure.csproj" />
+    <ProjectReference Include="../Modules/Progress/VocalCoach.Modules.Progress.Presentation/VocalCoach.Modules.Progress.Presentation.csproj" />
+    <ProjectReference Include="../Modules/Coach/VocalCoach.Modules.Coach.Infrastructure/VocalCoach.Modules.Coach.Infrastructure.csproj" />
+    <ProjectReference Include="../Modules/Coach/VocalCoach.Modules.Coach.Presentation/VocalCoach.Modules.Coach.Presentation.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { audioEngine } from '../../audio/engine';
-import { noteName } from '../../core/music/notes';
+import { displayNote } from '../../shared/labels';
 import { centsVsTarget, type OctaveMode, type Tolerance } from '../../core/scoring/pitch-scoring';
 import type { PitchFrame } from '../../core/pitch/types';
 
@@ -10,6 +10,7 @@ interface Props {
   tolerance: Tolerance;
   octaveMode: OctaveMode;
   showTarget: boolean;
+  detailed: boolean;
 }
 
 const SECONDS = 6;
@@ -19,10 +20,10 @@ const SEMITONES = 7;
  * Trayectoria de pitch en Canvas con requestAnimationFrame.
  * Recibe los frames directamente del motor, sin pasar por el estado de React.
  */
-export function PitchTrail({ centerMidi, tolerance, octaveMode, showTarget }: Props) {
+export function PitchTrail({ centerMidi, tolerance, octaveMode, showTarget, detailed }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const propsRef = useRef({ centerMidi, tolerance, octaveMode, showTarget });
-  propsRef.current = { centerMidi, tolerance, octaveMode, showTarget };
+  const propsRef = useRef({ centerMidi, tolerance, octaveMode, showTarget, detailed });
+  propsRef.current = { centerMidi, tolerance, octaveMode, showTarget, detailed };
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -49,7 +50,7 @@ export function PitchTrail({ centerMidi, tolerance, octaveMode, showTarget }: Pr
 
       const css = getComputedStyle(canvas);
       const color = (name: string) => css.getPropertyValue(name).trim();
-      const { centerMidi: center, tolerance: tol, octaveMode: mode, showTarget: target } = propsRef.current;
+      const { centerMidi: center, tolerance: tol, octaveMode: mode, showTarget: target, detailed: tech } = propsRef.current;
       const yOf = (cents: number) => h / 2 - (cents / (SEMITONES * 100)) * (h / 2);
 
       // Banda de tolerancia del objetivo.
@@ -69,8 +70,11 @@ export function PitchTrail({ centerMidi, tolerance, octaveMode, showTarget }: Pr
         g.moveTo(36, y);
         g.lineTo(w, y);
         g.stroke();
-        g.fillStyle = color('--muted');
-        g.fillText(noteName(center + s), 4, y);
+        // Modo sencillo: solo se nombra la nota central (la que hay que cantar).
+        if (tech || s === 0) {
+          g.fillStyle = s === 0 ? color('--ink') : color('--muted');
+          g.fillText(displayNote(center + s, tech), 4, y);
+        }
       }
 
       // Trayectoria: segmentos solo entre frames con voz consecutivos.
@@ -102,5 +106,5 @@ export function PitchTrail({ centerMidi, tolerance, octaveMode, showTarget }: Pr
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="trail" role="img" aria-label="Trayectoria de la afinación en los últimos 6 segundos" />;
+  return <canvas ref={canvasRef} className="trail" role="img" aria-label="Tu voz en los últimos 6 segundos: la línea debe quedarse en la franja de la nota" />;
 }

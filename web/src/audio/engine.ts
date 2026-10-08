@@ -3,7 +3,12 @@ import { PitchTracker } from '../core/pitch/tracker';
 import type { DetectorKind, PitchFrame } from '../core/pitch/types';
 import { checkBluetooth, type BluetoothCheck } from './devices';
 import type { PitchProcessorOptions, WorkletMessage } from './pitch-worklet';
-import { playReferenceTone } from './reference-tone';
+import { scheduleClick, type GuideEvent } from './guide';
+import { loadInstrument, playChords, playMelody, type InstrumentId } from './instruments';
+import { playSung } from './singer';
+import type { SungScore } from '../core/singing/score';
+import type { VoiceType } from '../core/singing/formants';
+import type { TimedChord } from '../core/music/chords';
 import workletUrl from './pitch-worklet.ts?worker&url';
 
 export type EngineStatus = 'idle' | 'starting' | 'running' | 'error';
@@ -56,6 +61,9 @@ export class AudioEngine {
   private frameListeners = new Set<FrameListener>();
   private snapshotListeners = new Set<() => void>();
   private suppressUntil = 0;
+  private guideNodes: AudioScheduledSourceNode[] = [];
+  private calibratedLatencyS: number | null = null;
+  private instrument: InstrumentId = 'piano';
   private stats = { transport: 0, process: null as number | null, count: 0, windowStart: 0, fps: 0 };
   private snapshot: EngineSnapshot = { status: 'idle', error: null, referencePlaying: false, diagnostics: null };
   private detector: DetectorKind = 'mpm';
@@ -110,6 +118,7 @@ export class AudioEngine {
       this.ctx.createMediaStreamSource(this.stream).connect(this.node).connect(mute).connect(this.ctx.destination);
 
       this.tracker = new PitchTracker();
+      this.suppressUntil = 0;
       this.stats = { transport: 0, process: null, count: 0, windowStart: performance.now(), fps: 0 };
       this.update({ status: 'running', diagnostics: this.buildDiagnostics() });
     } catch (err) {
@@ -136,22 +145,131 @@ export class AudioEngine {
     if (this.snapshot.diagnostics) this.update({ diagnostics: { ...this.snapshot.diagnostics, detector: kind } });
   }
 
-  /**
-   * Llamada y respuesta: suena la referencia y, mientras tanto, se ignora el micro
-   * para no detectar el propio tono de referencia. Resuelve cuando el usuario puede cantar.
-   */
-  playReference(midi: number, durationS = 1.2): Promise<void> {
+  /** Reloj del AudioContext (s), o null si el micrófono no está activo. */
+  now(): number | null {
+    return this.ctx?.currentTime ?? null;
+  }
+
+  /** Retardo estimado entre el sonido y el `t` de los frames: media ventana + latencia de entrada. */
+  latencyS(): number {
+    const d = this.snapshot.diagnostics;
+    // Con calibración, el valor medido ya incluye entrada, salida y análisis.
+    if (this.calibratedLatencyS !== null) return this.calibratedLatencyS;
+    if (!d) return 0;
+    return (d.algorithmicLatencyMs + (d.inputLatencyMs ?? 0)) / 1000;
+  }
+
+  /** Programa clics (sin silenciar el micro) para medir el retraso. Devuelve sus instantes. */
+  calibrationClicks(count: number, intervalS: number): number[] {
     const ctx = this.ctx;
-    if (!ctx) return Promise.resolve();
-    const end = playReferenceTone(ctx, midi, durationS);
-    this.suppressUntil = end + REFERENCE_TAIL_S;
+    if (!ctx) return [];
+    const first = ctx.currentTime + 0.5;
+    const times = Array.from({ length: count }, (_, i) => first + i * intervalS);
+    times.forEach((t) => scheduleClick(ctx, t, true));
+    return times;
+  }
+
+  /**
+   * Llamada y respuesta: suena la guía y, mientras tanto, se ignora el micro
+   * para no detectar la propia referencia. `done` se resuelve cuando el usuario puede cantar.
+   */
+  /**
+   * Instrumento de la guía y las demostraciones. Empieza a descargar sus grabaciones;
+   * la promesa se resuelve cuando están listas (mientras tanto suena la versión sintetizada).
+   */
+  setInstrument(id: InstrumentId): Promise<boolean> {
+    this.instrument = id;
+    return loadInstrument(id);
+  }
+
+  /**
+   * Toca la guía. Por defecto el micro se ignora mientras suena (llamada y respuesta).
+   * Con `listen` (karaoke con auriculares) se sigue escuchando: el usuario canta a la vez.
+   * `startDelayS` deja margen antes de empezar (p. ej. para una cuenta atrás).
+   */
+  playGuide(
+    events: readonly GuideEvent[],
+    chords?: readonly TimedChord[],
+    options: { listen?: boolean; startDelayS?: number; melodyGain?: number; sung?: { score: SungScore; voice: VoiceType } } = {},
+  ): { startT: number; endT: number; done: Promise<void> } {
+    const ctx = this.ctx;
+    if (!ctx) return { startT: 0, endT: 0, done: Promise.resolve() };
+    const startT = ctx.currentTime + 0.08 + (options.startDelayS ?? 0);
+    this.guideNodes = this.guideNodes.filter((n) => n.context === ctx);
+    // Con `sung`, la melodía la canta la voz sintética con la letra (Fase 9).
+    const endT =
+      options.melodyGain === 0
+        ? startT + events.reduce((a, e) => a + e.durationS, 0)
+        : options.sung
+          ? playSung(ctx, options.sung.score, options.sung.voice, startT, this.guideNodes)
+          : playMelody(ctx, this.instrument, events, startT, this.guideNodes);
+    if (chords?.length) playChords(ctx, this.instrument, chords, startT, this.guideNodes);
+    if (options.listen) {
+      const done = new Promise<void>((resolve) => {
+        const check = () => (this.ctx !== ctx || ctx.currentTime >= endT ? resolve() : setTimeout(check, 100));
+        check();
+      });
+      return { startT, endT, done };
+    }
+    return { startT, endT, done: this.suppressUntilTime(endT + REFERENCE_TAIL_S) };
+  }
+
+  /** Retraso medido con la calibración (salida + entrada), que se suma al del navegador. */
+  setCalibratedLatency(seconds: number): void {
+    this.calibratedLatencyS = Math.max(0, Math.min(1, seconds));
+  }
+
+  /** Corta la guía que esté sonando (p. ej. al escuchar una melodía larga). */
+  stopGuide(): void {
+    const ctx = this.ctx;
+    for (const n of this.guideNodes) {
+      try {
+        n.stop();
+      } catch {
+        /* ya parado */
+      }
+    }
+    this.guideNodes = [];
+    if (ctx) this.suppressUntil = ctx.currentTime;
+  }
+
+  playReference(midi: number, durationS = 1.2): Promise<void> {
+    return this.playGuide([{ type: 'note', midi, durationS }]).done;
+  }
+
+  /**
+   * Cuenta atrás con claqueta. Devuelve el instante (reloj del contexto) en que empieza
+   * el canto, un pulso después del último clic. El micro se ignora durante los clics.
+   */
+  countdown(beats: number, beatS: number): { singT: number; beatTimes: number[] } {
+    const ctx = this.ctx;
+    if (!ctx) return { singT: 0, beatTimes: [] };
+    const first = ctx.currentTime + 0.1;
+    const beatTimes = Array.from({ length: beats }, (_, i) => first + i * beatS);
+    let lastEnd = first;
+    beatTimes.forEach((t, i) => (lastEnd = scheduleClick(ctx, t, i === 0)));
+    void this.suppressUntilTime(lastEnd + 0.1);
+    return { singT: first + beats * beatS, beatTimes };
+  }
+
+  private suppressUntilTime(until: number): Promise<void> {
+    const ctx = this.ctx!;
+    this.suppressUntil = Math.max(this.suppressUntil, until);
     this.update({ referencePlaying: true });
     return new Promise((resolve) => {
-      setTimeout(() => {
+      const check = () => {
+        if (this.ctx !== ctx) return resolve();
+        // setTimeout y el reloj de audio derivan unos ms: se reintenta hasta cumplir ambos plazos.
+        const remaining = Math.max(until, this.suppressUntil) - ctx.currentTime;
+        if (remaining > 0.005) {
+          setTimeout(check, remaining * 1000 + 5);
+          return;
+        }
         this.tracker.reset();
         this.update({ referencePlaying: false });
         resolve();
-      }, (this.suppressUntil - ctx.currentTime) * 1000);
+      };
+      check();
     });
   }
 

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="Dapper" />
+    <ProjectReference Include="../VocalCoach.Modules.Progress.Application/VocalCoach.Modules.Progress.Application.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/VocalCoach.BuildingBlocks.Infrastructure/VocalCoach.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
