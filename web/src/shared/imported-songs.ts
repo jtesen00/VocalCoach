@@ -11,3 +11,8 @@ export function addImportedSong(song: Song): void {
 export function removeImportedSong(id: string): void {
   importedSongsStore.update((s) => ({ songs: s.songs.filter((x) => x.id !== id) }));
 }
+
+/** Guarda una canción importada editada (Fase 8c), en su sitio de la lista. */
+export function updateImportedSong(song: Song): void {
+  importedSongsStore.update((s) => ({ songs: s.songs.map((x) => (x.id === song.id ? song : x)) }));
+}

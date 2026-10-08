@@ -5,6 +5,7 @@ import { guideChords, guideEvents, type GuideEvent } from '../../core/exercises/
 import type { TimedChord } from '../../core/music/chords';
 import { allPhrases, phrasePlan } from '../../core/songs/melody';
 import { describeIssue } from '../../core/songs/coach';
+import { hasLyrics } from '../../core/songs/edit';
 import { weakestPhrase } from '../../core/songs/scoring';
 import type { Song } from '../../core/songs/types';
 import { profileRanges } from '../../core/profile/vocal-profile';
@@ -25,6 +26,8 @@ interface Props {
   onBack: () => void;
   /** Cantar la canción entera de corrido (modo karaoke). */
   onKaraoke: () => void;
+  /** Solo en las importadas: editar título, letra y frases. */
+  onEdit?: () => void;
 }
 
 const ICON = (score: number) => (score >= 80 ? '✓' : score >= 60 ? '⚠' : '✗');
@@ -34,7 +37,7 @@ function amountWord(t: number): string {
   return a <= 2 ? 'un poco' : a <= 5 ? '' : 'bastante';
 }
 
-export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onBack, onKaraoke }: Props) {
+export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onBack, onKaraoke, onEdit }: Props) {
   const profile = profileStore.use();
   const all = songStore.use();
   const progress = all[song.id] ?? { transpose: null, byKey: {} };
@@ -90,7 +93,12 @@ export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onB
       {imported && song.extraction && (
         <p className={`notice quality-${song.extraction.quality}`}>
           <strong>Calidad de la extracción: {song.extraction.quality}.</strong> {QUALITY[song.extraction.quality]}
-          {!song.extraction.stereo && ' El archivo es mono: con estéreo se separa mejor la voz de los instrumentos.'}
+          {song.extraction.separated
+            ? ' La voz se separó con IA antes de analizarla.'
+            : <>
+                {!song.extraction.stereo && ' El archivo es mono: con estéreo se separa mejor la voz de los instrumentos.'}
+                {song.extraction.quality !== 'buena' && ' Para mejorarla, impórtala de nuevo marcando «Separar la voz con IA».'}
+              </>}
         </p>
       )}
       {song.source && (
@@ -102,6 +110,7 @@ export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onB
       <p className="version-buttons">
         <button className="primary" onClick={onKaraoke}>🎤 Cantar la canción entera</button>
         <ListenButton events={wholeMelody} label="▶ Escuchar toda la melodía" />
+        {onEdit && <button onClick={onEdit}>✏️ Editar letra y frases</button>}
         {imported && <span className="hint">Cada frase indica en qué minuto empieza en la canción original, para que la compares.</span>}
       </p>
 
@@ -189,7 +198,7 @@ export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onB
                   <span className="phrase-num">Frase {p.index + 1}</span>
                   <span className="phrase-lyrics">
                     <MelodyShape plan={phrasePlan(p, transpose)} />
-                    {imported && !song.source ? `${p.phrase.lyrics} · ${p.phrase.notes.length} notas` : p.phrase.lyrics}
+                    {imported && !hasLyrics(p.phrase) ? `${p.phrase.lyrics} · ${p.phrase.notes.length} notas` : p.phrase.lyrics}
                   </span>
                   <ListenButton className="small" events={() => phraseSound(p)} label="▶" playingLabel="■" />
                   <span className={`phrase-last ${r ? (r.last >= 80 ? 'pass' : r.last >= 60 ? 'fair' : 'fail') : ''}`}>

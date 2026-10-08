@@ -1,6 +1,6 @@
 # Estado actual
 
-_Última actualización: 2026-10-06 · versión 0.2.0 + interfaz sencilla + Fase 4 + Fase 8a (sin publicar, en `dev`)_
+_Última actualización: 2026-10-06 · versión 0.2.0 + Fases 4–8c (sin publicar, en `dev`)_
 
 ## Ramas
 - `main`: tiene la Fase 2 (PR #1 fusionado). **La Fase 3 no llegó a `main`**: se fusionó antes del último push.
@@ -21,15 +21,16 @@ _Última actualización: 2026-10-06 · versión 0.2.0 + interfaz sencilla + Fase
 - Fase 7: PWA instalable y sin internet (service worker, manifiesto, aviso de actualización, `storage.persist()`).
 - Fase 6: backend .NET en `api/` (Identity, Practice, Progress, Coach), cuenta opcional y sincronización entre dispositivos en la web, y profe con IA por el servidor.
 - Fase 8b: archivos de melodía (UltraStar, MIDI/.kar, MusicXML/.mxl) con letra, canción entera tipo karaoke (con guía o con el original fuera de la app) y calibración de sincronía.
-- Web: 242 tests unitarios y 23 E2E. API: 42 tests. Dos workflows de CI (`web.yml` y `api.yml`).
+- Fase 8c: separación de voz **en el navegador** (HT-Demucs FT en ONNX, WebGPU/WASM, opcional, modelo de 166 MB bajo demanda) y edición de canciones importadas (título, letra, octava, unir, dividir, borrar). Ayuda cuando la banda tapa la voz (68 % → 90 %), empeora la voz grave de prueba (73 % → 63 %): por eso no va por defecto.
+- Web: 258 tests unitarios y 24 E2E (+ la medición de separación, que se omite sin el modelo en `web/.models/`). API: 42 tests. Dos workflows de CI (`web.yml` y `api.yml`).
 
 ## Siguiente
 1. Medir en dispositivos reales (checklist en `docs/benchmarks/README.md`).
 2. Grabar intentos reales con consentimiento; validar el detector y el scoring frente al juicio de un profesor; ajustar umbrales.
 3. Revisar los textos del profesor con un profesor de canto y validar con alumnos el bucle de canciones.
-3b. Probar la importación con MP3 reales del usuario (la mezcla realista es simulada) y ajustar umbrales; el caso más débil es la voz grave (80 %); después, editar frases o letra y separación de voz (8c).
+3b. Probar la importación con MP3 reales del usuario, con y sin «Separar la voz con IA» (la mezcla realista es simulada); comprobar si la separación pierde de verdad las voces graves. Medir la separación con WebGPU y en móviles (~1 GB de RAM).
 4. Validar con usuarios el camino de 10 días (duración y contenido) y probar la instalación de la PWA en Android y iPhone reales.
-5. Desplegar la API y la web (decidir proveedor) y configurar `VITE_API_URL`; después, la fase 8c (separación de voz) y la 9 (demostraciones cantadas con IA).
+5. Desplegar la API y la web (decidir proveedor), configurar `VITE_API_URL` y enviar las cabeceras COOP/COEP (hilos para la separación); después, la fase 9 (demostraciones cantadas con IA).
 
 ## Preguntas abiertas
 - IA: probado el caso A (profe conversacional) con Groq y clave en el navegador. ¿Siguiente: Gemini como alternativa, letra para canciones importadas (B) o el intermediario para producción?
@@ -39,9 +40,9 @@ _Última actualización: 2026-10-06 · versión 0.2.0 + interfaz sencilla + Fase
 ## Dónde está cada cosa
 - Núcleo puro: `web/src/core/` (music, pitch, scoring, range, exercises, teacher, profile, songs).
 - Backend: `api/` (ver `api/README.md`; módulos en `api/src/Modules/`).
-- Audio: `web/src/audio/` (engine, pitch-worklet, guide, devices, instruments, samples, synth, mix).
+- Audio: `web/src/audio/` (engine, pitch-worklet, guide, devices, instruments, samples, synth, mix, separation-model, separation-worker).
 - Sonidos grabados: `web/public/samples/` (generados con `web/scripts/build-samples.py`; créditos en `CREDITS.md`).
 - Mezcla realista para tests: `web/src/dev/real-mix.ts` (no entra en la app).
 - Pantallas: `web/src/features/` (tuner, range, exercises, teacher, settings, songs).
-- Datos locales: IndexedDB `vocalcoach` (tabla `attempts`, Fase 5) y `localStorage`: `vocalcoach.settings.v1`, `vocalcoach.profile.v1`, `vocalcoach.songs.v1`, `vocalcoach.imported.v1`.
+- Datos locales: IndexedDB `vocalcoach` (tabla `attempts`, Fase 5) y `localStorage`: `vocalcoach.settings.v1`, `vocalcoach.profile.v1`, `vocalcoach.songs.v1`, `vocalcoach.imported.v1`. Modelo de separación en la Cache API `vocalcoach-models-v1`.
 - Planes: `docs/planning/` · ADRs: `docs/adr/` · Benchmarks: `docs/benchmarks/`.

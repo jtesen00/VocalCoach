@@ -8,6 +8,7 @@
 | [fase-03-ejercicios.md](fase-03-ejercicios.md) | Fase 3: ejercicios (épicas, tareas y criterios de aceptación) |
 | [fase-04-profesor-virtual.md](fase-04-profesor-virtual.md) | Fase 4: profesor virtual (diagnóstico, consejos, demostraciones, siguiente paso, coach en vivo) |
 | [fase-08a-canciones.md](fase-08a-canciones.md) | Fase 8a (adelantada): entrenamiento por canción e importación desde audio |
+| [fase-08c-separacion-de-voz.md](fase-08c-separacion-de-voz.md) | Fase 8c: separación de voz en el navegador y edición de canciones importadas |
 
 La investigación está en `../research/`: [fuentes de melodía](../research/fuentes-de-melodia.md) y [proveedores de IA gratuitos](../research/ia-proveedores.md).
 

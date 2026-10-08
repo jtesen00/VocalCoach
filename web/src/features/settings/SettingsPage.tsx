@@ -3,6 +3,7 @@ import { INSTRUMENTS } from '../../audio/instruments';
 import { AiSettingsPanel } from './AiSettingsPanel';
 import { AccountPanel } from './AccountPanel';
 import { LatencyCalibration } from './LatencyCalibration';
+import { SeparationModelPanel } from './SeparationModelPanel';
 import { InstallSection } from '../../app/pwa';
 import { phraseChords } from '../../core/music/chords';
 import { noteName, solfegeName } from '../../core/music/notes';
@@ -124,6 +125,8 @@ export function SettingsPage({ settings, updateSettings, onMeasureVoice }: Props
       </fieldset>
 
       <AiSettingsPanel detailed={settings.showDetails} />
+
+      <SeparationModelPanel detailed={settings.showDetails} />
 
       <fieldset>
         <legend>Para curiosos</legend>

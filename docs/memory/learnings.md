@@ -36,3 +36,7 @@
 - **Dapper con PostgreSQL:** `DefaultTypeMap.MatchNamesWithUnderscores = true` para snake_case y un `TypeHandler<DateOnly>`. Para leer una columna `date` se usa `ReadAsync<DateOnly>()`, no `DateTime`.
 - **NetArchTest puede pasar en vacío** si no ve las dependencias: hay un test de control que exige que una dependencia conocida se detecte.
 - **Matar la API local:** `pkill -f VocalCoach.Api` también mata la propia shell (su línea de comandos lo contiene). Usar `fuser -k 5080/tcp`.
+- **ONNX Runtime Web con pesos fp16 y optimización del grafo:** `std::bad_alloc` al crear la sesión (al plegar las conversiones fp16 → fp32 se duplica la memoria en WASM, límite de 4 GB). Con `graphOptimizationLevel: 'disabled'` funciona y apenas cambia la velocidad.
+- **El `.wasm` de ORT con Vite:** excluir `onnxruntime-web` de `optimizeDeps` e importar el wasm con `?url` (`ort.env.wasm.wasmPaths = { wasm: url }`). Si no, el servidor devuelve el `index.html` y falla con «expected magic word 00 61 73 6d».
+- **Demucs no reconoce una «voz» sintética** (tonos armónicos): para medir la separación hace falta voz grabada (`dev/real-mix.ts`), no `test-mix.ts`.
+- **Medir con Playwright mientras se edita `src/`:** Vite recarga la página y el `page.evaluate` largo muere («Execution context was destroyed»). Para mediciones largas, ejecutar desde una copia del código.

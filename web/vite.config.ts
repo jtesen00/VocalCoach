@@ -9,6 +9,8 @@ const groqProxy = { '/groq': { target: 'https://api.groq.com', changeOrigin: tru
 // Backend .NET local (api/): `dotnet run --project src/VocalCoach.Api` escucha en el puerto 5080.
 const proxy = { ...groqProxy, '/api': { target: process.env.VOCALCOACH_API ?? 'http://localhost:5080', changeOrigin: true } };
 
+const isolation = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' };
+
 export default defineConfig({
   plugins: [
     react(),
@@ -42,11 +44,17 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallbackDenylist: [/^\/groq/, /^\/api\//],
         cleanupOutdatedCaches: true,
+        // El motor de la separación de voz (28 MB) no se precarga: se guarda la primera vez que se usa.
+        runtimeCaching: [{ urlPattern: /\/assets\/ort-wasm.*\.wasm$/, handler: 'CacheFirst', options: { cacheName: 'vocalcoach-ort-wasm', expiration: { maxEntries: 2 } } }],
       },
     }),
   ],
-  server: { proxy },
-  preview: { proxy },
+  // ONNX Runtime (separación de voz, Fase 8c) localiza sus .wasm con import.meta.url: sin pre-empaquetar.
+  optimizeDeps: { exclude: ['onnxruntime-web'] },
+  // Aislamiento de origen: permite a ONNX Runtime usar varios hilos al separar la voz (Fase 8c).
+  // El hosting de producción debe enviar las mismas cabeceras; sin ellas funciona con un solo hilo.
+  server: { proxy, headers: isolation },
+  preview: { proxy, headers: isolation },
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',

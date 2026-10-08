@@ -163,17 +163,32 @@ export interface ExtractionQuality {
   /** Centrado estéreo medio de la voz detectada (1 en mono). */
   center: number;
   stereo: boolean;
+  /** La melodía se extrajo de la voz separada con IA (Fase 8c). */
+  separated: boolean;
   level: 'buena' | 'media' | 'baja';
 }
 
-export function extractionQuality(frames: readonly MelodyFrame[], stereo: boolean): ExtractionQuality {
+export function extractionQuality(frames: readonly MelodyFrame[], stereo: boolean, separated = false): ExtractionQuality {
   const voiced = frames.filter((f) => f.midi !== null);
   const voicedRatio = frames.length ? voiced.length / frames.length : 0;
   const center = voiced.length ? voiced.reduce((a, f) => a + f.center, 0) / voiced.length : 0;
   // Pocas zonas con voz o una voz poco centrada suelen indicar que se siguió a un instrumento.
-  const level = voicedRatio >= 0.3 && (!stereo || center >= 0.8) ? 'buena' : voicedRatio >= 0.12 ? 'media' : 'baja';
-  return { voicedRatio, center, stereo, level };
+  // Con la voz separada, el centrado ya no informa: lo que queda es la voz.
+  const centered = separated || !stereo || center >= 0.8;
+  const level = voicedRatio >= 0.3 && centered ? 'buena' : voicedRatio >= 0.12 ? 'media' : 'baja';
+  return { voicedRatio, center, stereo, separated, level };
 }
+
+export interface TranscribeOptions {
+  onProgress?: (p: number) => void;
+  /**
+   * Voz separada de la mezcla (Fase 8c), a la misma frecuencia de muestreo. Si está, la
+   * melodía se extrae de ella; los acordes, siempre de la mezcla.
+   */
+  vocals?: { left: Float32Array; right: Float32Array | null };
+}
+
+const isStereo = (left: Float32Array, right: Float32Array | null) => !!right && !left.every((v, i) => Math.abs(v - right[i]) < 1e-6);
 
 /**
  * Audio → notas de la melodía cantada, con la extracción polifónica.
@@ -183,16 +198,17 @@ export function transcribeAudio(
   left: Float32Array,
   right: Float32Array | null,
   sampleRate: number,
-  onProgress?: (p: number) => void,
+  options: TranscribeOptions | ((p: number) => void) = {},
 ): { notes: TranscribedNote[]; chords: TimedChord[]; quality: ExtractionQuality } {
-  const line = extractMelody(left, right, sampleRate, { onProgress: (p) => onProgress?.(0.9 * p) });
-  const stereo = !!right && !left.every((v, i) => Math.abs(v - right[i]) < 1e-6);
+  const o = typeof options === 'function' ? { onProgress: options } : options;
+  const src = o.vocals ?? { left, right };
+  const line = extractMelody(src.left, src.right, sampleRate, { onProgress: (p) => o.onProgress?.(0.9 * p) });
   const frames: PitchFrame[] = line.map((f) => ({ t: f.t, f0: null, midi: f.midi, clarity: 1, levelDb: 0, voiced: f.midi !== null }));
   const notes = segmentNotes(frames);
   // Acordes del propio audio, con preferencia por los de la tonalidad de la melodía.
   const chords = recognizeChords(left, right, sampleRate, notes.length ? estimateKey(notes) : undefined);
-  onProgress?.(1);
-  return { notes, chords, quality: extractionQuality(line, stereo) };
+  o.onProgress?.(1);
+  return { notes, chords, quality: extractionQuality(line, isStereo(left, right), !!o.vocals) };
 }
 
 /** Limpieza de la línea melódica para que se pueda cantar y seguir (estilo karaoke). */
@@ -310,6 +326,9 @@ export function karaokeLines(notes: readonly TranscribedNote[], options: Partial
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
+/** Rótulo de una frase sin letra de una canción importada desde audio: "0:12 – 0:18". */
+export const phraseTimeLabel = (startS: number, endS: number) => `${clock(startS)} – ${clock(endS)}`;
+
 /**
  * Notas → canción con líneas tipo karaoke y, si se reconocieron, los acordes del audio.
  * Se usa 60 pulsos por minuto para que un pulso sea un segundo (no hace falta detectar el tempo).
@@ -337,7 +356,7 @@ export function notesToSong(
       .filter((c) => c.beats > 0.15);
     return {
       id: `p${i + 1}`,
-      lyrics: `${clock(origin)} – ${clock(end)}`,
+      lyrics: phraseTimeLabel(origin, end),
       originS: origin,
       chords: chords.length ? chords : undefined,
       notes: g.map(

@@ -18,6 +18,11 @@ Se adelanta un **nivel C local**: el usuario carga un MP3/M4A/WAV de cualquier c
 - La calibración de latencia mide el retraso real (salida + entrada) con clics. Para la octava se usa "cualquier octava" al cantar con el original.
 - El "modo libre" sin melodía ya existe como **Canta libre**. Sin reproducir el original, no aporta más.
 
+## Implementación de la 8c (2026-10-06)
+- La separación de voz se hace **en el navegador**, no en servidor: HT-Demucs FT (voz, MIT) en ONNX, con ONNX Runtime Web (WebGPU o WASM) en un Web Worker. Así el audio sigue sin salir del dispositivo y no hace falta GPU propia.
+- Es **opcional**: el modelo (166 MB) se descarga solo si el usuario lo pide y se guarda en la Cache API; se puede borrar desde Ajustes.
+- Las canciones importadas se pueden **editar** (título, letra, octava, unir, dividir y borrar frases). Detalle en [fase-08c](../planning/fase-08c-separacion-de-voz.md).
+
 ## Decisión original
 1. **Fase 8b, local:** importar **audio (MP3/M4A/WAV) + melodía (UltraStar `.txt` o MIDI; MusicXML más adelante)**. Todo se procesa y guarda en el dispositivo (IndexedDB/OPFS). Sin melodía hay **modo libre**: trayectoria del usuario sobre la música, sin puntuación.
 2. **Fase 8c, opcional:** extracción automática de la melodía desde el audio (separación de voz tipo Demucs + pitch tracking + alineación opcional de la letra) como **trabajo en servidor** (cola en Postgres + GPU serverless). Solo con consentimiento explícito: el audio se borra tras procesarse y solo se conserva la melodía derivada, privada para el usuario. Se evaluará hacerlo en el navegador con WebGPU.
@@ -28,4 +33,4 @@ Se adelanta un **nivel C local**: el usuario carga un MP3/M4A/WAV de cualquier c
 
 ## Consecuencias
 - El motor de pitch y el scoring se reutilizan tal cual. Lo nuevo es el modelo `Song → Phrase → Note(t, duración, midi, sílaba)`, los parsers de UltraStar/MIDI y el timeline.
-- El nivel 8c añade el primer componente Python/GPU, compartido con la Fase 9.
+- ~~El nivel 8c añade el primer componente Python/GPU, compartido con la Fase 9.~~ La 8c se resolvió en el navegador; el componente Python/GPU queda para la Fase 9.

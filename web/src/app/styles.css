@@ -299,11 +299,16 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .file-field input { max-width: 100%; }
 input.time { width: 5.5rem; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 0.3rem 0.5rem; }
 .import-song progress { width: 100%; }
+.editor-list li { grid-template-columns: 4.6rem 1fr auto; }
+.editor-list .editor-actions { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.lyrics-input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--surface); color: inherit; border-radius: 6px; padding: 0.3rem 0.5rem; }
+.editor-footer { position: sticky; bottom: 0; background: var(--bg); padding: 10px 0; border-top: 1px solid var(--line); }
 @media (max-width: 480px) {
   .phrase-list li { grid-template-columns: 1fr auto auto; gap: 0.3rem 0.75rem; }
   .phrase-num { grid-column: 1 / -1; }
   .phrase-lyrics { grid-column: 1 / -1; }
   .phrase-list li > button.small { justify-self: start; min-width: 2.6rem; }
+  .editor-list .editor-actions { grid-column: 1 / -1; }
 }
 
 /* Fase 5: camino y progreso */

@@ -75,3 +75,35 @@ test('karaoke con la guía de la app (catálogo): cuenta atrás, letra y resulta
   // Al terminar antes de tiempo se ve lo cantado hasta ahí (o se vuelve al inicio si no dio tiempo a ninguna frase).
   await expect(page.getByRole('button', { name: /Cantarla otra vez|▶ Empezar/ })).toBeVisible();
 });
+
+test('editar una canción importada: título, letra, dividir, deshacer y guardar', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openSongs(page);
+  await page.locator('input[type=file]').setInputFiles({ name: 'cancion.txt', mimeType: 'text/plain', buffer: Buffer.from(ULTRASTAR, 'utf-8') });
+  await page.getByLabel(/Uso este archivo solo para mi práctica personal/).check();
+  await page.getByRole('button', { name: 'Importar melodía' }).click();
+  await expect(page.getByRole('heading', { name: 'Canción de prueba' })).toBeVisible();
+
+  await page.getByRole('button', { name: '✏️ Editar letra y frases' }).click();
+  await page.getByLabel('Título').fill('Mi versión');
+  await page.getByLabel('Letra de la frase 2').fill('la lu-na');
+  await page.getByRole('button', { name: 'Dividir la frase 1' }).click();
+  await expect(page.locator('.editor-list li')).toHaveCount(3);
+  // La letra escrita antes de dividir se conserva.
+  await expect(page.getByLabel('Letra de la frase 3')).toHaveValue('la luna');
+  await page.getByRole('button', { name: 'Deshacer' }).click();
+  await expect(page.locator('.editor-list li')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Unir la frase 1 con la siguiente' }).click();
+  await expect(page.locator('.editor-list li')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Guardar cambios' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Mi versión' })).toBeVisible();
+  const phrases = page.locator('.phrase-list li');
+  await expect(phrases).toHaveCount(1);
+  await expect(phrases.first()).toContainText('Canta con migo la luna');
+  // Se guarda en el dispositivo.
+  await page.reload();
+  await page.getByRole('button', { name: 'Activar micrófono' }).click();
+  await page.getByRole('button', { name: 'Canciones', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Mi versión' })).toBeVisible();
+});

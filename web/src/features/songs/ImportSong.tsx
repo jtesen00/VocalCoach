@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { importSongFromFile } from '../../audio/melody-import';
+import { useEffect, useRef, useState } from 'react';
+import { importSongFromFile, type ImportStage } from '../../audio/melody-import';
+import { downloadModel, isModelDownloaded, modelSizeLabel } from '../../audio/separation-model';
 import { allPhrases } from '../../core/songs/melody';
 import { addImportedSong, importedSongsStore, removeImportedSong } from '../../shared/imported-songs';
 import { isMelodyFile } from '../../core/songs/formats';
@@ -22,14 +23,24 @@ export function ImportSong({ onOpen }: { onOpen: (id: string) => void }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [rights, setRights] = useState(false);
-  const [progress, setProgress] = useState<{ stage: 'decoding' | 'analyzing'; value: number } | null>(null);
+  const [separate, setSeparate] = useState(false);
+  const [modelReady, setModelReady] = useState(false);
+  const [progress, setProgress] = useState<{ stage: ImportStage | 'downloading'; value: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const abort = useRef<AbortController | null>(null);
 
   const melodyFile = !!file && isMelodyFile(file.name);
+
+  useEffect(() => {
+    isModelDownloaded().then(setModelReady);
+    return () => abort.current?.abort();
+  }, []);
 
   const run = async () => {
     if (!file) return;
     setError(null);
+    abort.current = new AbortController();
+    const signal = abort.current.signal;
     try {
       if (melodyFile) {
         // Archivo de melodía (UltraStar, MIDI, MusicXML): la melodía es exacta y suele traer letra.
@@ -43,9 +54,17 @@ export function ImportSong({ onOpen }: { onOpen: (id: string) => void }) {
         onOpen(song.id);
         return;
       }
+      const withSeparation = separate;
+      if (withSeparation && !modelReady) {
+        setProgress({ stage: 'downloading', value: 0 });
+        await downloadModel((value) => setProgress({ stage: 'downloading', value }), signal);
+        setModelReady(true);
+      }
       const { song } = await importSongFromFile(file, {
         fromS: parseTime(from),
         toS: parseTime(to),
+        separate: withSeparation,
+        signal,
         onProgress: (stage, value) => setProgress({ stage, value }),
       });
       if (!allPhrases(song).length) {
@@ -56,13 +75,26 @@ export function ImportSong({ onOpen }: { onOpen: (id: string) => void }) {
       setFile(null);
       onOpen(song.id);
     } catch (e) {
+      if ((e as Error).name === 'AbortError') return;
       setError(e instanceof DOMException || (e as Error).name === 'EncodingError'
         ? 'No se pudo leer el archivo. Prueba con MP3, M4A o WAV, o con un archivo de melodía (UltraStar, MIDI o MusicXML).'
         : (e as Error).message);
     } finally {
       setProgress(null);
+      abort.current = null;
     }
   };
+
+  const label = (() => {
+    if (!progress) return melodyFile ? 'Importar melodía' : 'Analizar melodía';
+    const p = `${Math.round(progress.value * 100)} %`;
+    switch (progress.stage) {
+      case 'downloading': return `Descargando el separador de voz… ${p}`;
+      case 'decoding': return 'Leyendo el audio…';
+      case 'separating': return `Separando la voz… ${p}`;
+      case 'analyzing': return `Analizando la melodía… ${p}`;
+    }
+  })();
 
   return (
     <section className="import-song" aria-label="Importar canción">
@@ -86,14 +118,28 @@ export function ImportSong({ onOpen }: { onOpen: (id: string) => void }) {
         <label className="field">Hasta <input className="time" placeholder="final" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Hasta (minutos:segundos)" /></label>
         <span className="hint">Opcional: analiza solo el fragmento que quieres cantar.</span>
       </div>}
+      {!melodyFile && (
+        <label className="choice">
+          <input type="checkbox" checked={separate} onChange={(e) => setSeparate(e.target.checked)} disabled={!!progress} />
+          <span>
+            <strong>Separar la voz con IA</strong> <span className="hint">(útil cuando los instrumentos tapan la voz)</span>
+            <span className="hint">
+              {' '}— Un modelo de IA aísla la voz antes de analizarla. Funciona en tu dispositivo: el audio sigue sin salir de él.
+              {modelReady ? ' El modelo ya está descargado.' : ` La primera vez se descarga el modelo (${modelSizeLabel}, una sola vez; mejor con wifi).`}
+              {' '}Tarda más: en un ordenador sin tarjeta gráfica, unos 3 minutos por minuto de canción. Mejor con un fragmento.
+            </span>
+          </span>
+        </label>
+      )}
       <label className="choice">
         <input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} />
         <span>Uso este archivo solo para mi práctica personal y educativa, y tengo derecho a usarlo así.</span>
       </label>
       <p>
-        <button className="primary" onClick={run} disabled={!file || !rights || !!progress}>
-          {progress ? (progress.stage === 'decoding' ? 'Leyendo el audio…' : `Analizando la melodía… ${Math.round(progress.value * 100)} %`) : melodyFile ? 'Importar melodía' : 'Analizar melodía'}
-        </button>
+        <button className="primary" onClick={run} disabled={!file || !rights || !!progress}>{label}</button>
+        {progress && progress.stage !== 'analyzing' && separate && (
+          <button className="link" onClick={() => abort.current?.abort()}>Cancelar</button>
+        )}
       </p>
       {progress && <progress max={1} value={progress.stage === 'decoding' ? undefined : progress.value} aria-label="Progreso del análisis" />}
       {error && <p className="notice error" role="alert">{error}</p>}

@@ -10,6 +10,7 @@ import { practiceTranspose, setSongVersion, songStore } from '../../shared/song-
 import { ImportSong } from './ImportSong';
 import { Karaoke } from './Karaoke';
 import { PhrasePractice } from './PhrasePractice';
+import { SongEditor } from './SongEditor';
 import { SongOverview } from './SongOverview';
 import { TrainingFlow } from './TrainingFlow';
 
@@ -24,7 +25,8 @@ type View =
   | { kind: 'song'; id: string }
   | { kind: 'phrase'; id: string; index: number; transpose: number }
   | { kind: 'training'; id: string; index: number; transpose: number }
-  | { kind: 'karaoke'; id: string };
+  | { kind: 'karaoke'; id: string }
+  | { kind: 'edit'; id: string };
 
 export function SongsPage({ settings, updateSettings, onMeasure }: Props) {
   const [view, setView] = useState<View>({ kind: 'list' });
@@ -49,12 +51,16 @@ export function SongsPage({ settings, updateSettings, onMeasure }: Props) {
         onTrain={(index) => practise(song, 'training', index)}
         onMeasure={onMeasure}
         onBack={() => setView({ kind: 'list' })}
+        onEdit={song.license === 'user-provided' ? () => setView({ kind: 'edit', id: song.id }) : undefined}
         onKaraoke={() => {
           setSongVersion(song.id, practiceTranspose(song));
           setView({ kind: 'karaoke', id: song.id });
         }}
       />
     );
+  }
+  if (song && view.kind === 'edit') {
+    return <SongEditor key={song.id} song={song} onDone={() => setView({ kind: 'song', id: song.id })} />;
   }
   if (song && view.kind === 'karaoke') {
     return <Karaoke key={song.id} song={song} settings={settings} onBack={() => setView({ kind: 'song', id: song.id })} onTrain={(index) => practise(song, 'training', index)} />;

@@ -121,3 +121,6 @@ Después, la misma segmentación de `transcribe.ts`. Medir la calidad con un con
 
 ## Demostraciones cantadas con IA (spec §17)
 Se amplía el ADR-008: además de "texto + melodía", la entrada puede ser **frase de canción + melodía objetivo (de este modelo de datos) + características vocales del usuario**. Orden: síntesis sin IA (ya existe: la guía), luego síntesis de canto con voces con licencia, y por último conversión a la voz del usuario con consentimiento. Sigue fuera del MVP.
+
+## Separación de voz (fase 8c): medición
+Implementada en el navegador con HT-Demucs FT (voz) en ONNX. En la mezcla realista ayuda mucho cuando la banda tapa la voz (voz 8 dB por debajo: 68 % → 90 % de notas bien) y reduce las notas de más, pero pierde notas con la voz grave de prueba (73 % → 63 %). Tabla completa y conclusiones en [fase-08c](../planning/fase-08c-separacion-de-voz.md#medición).

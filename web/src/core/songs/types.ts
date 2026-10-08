@@ -44,7 +44,7 @@ export interface Song {
   key: { tonic: number; mode: 'mayor' | 'menor' };
   sections: SongSection[];
   /** Solo en canciones importadas: cómo fue la extracción de la melodía. */
-  extraction?: { quality: 'buena' | 'media' | 'baja'; stereo: boolean; fromS: number; toS: number };
+  extraction?: { quality: 'buena' | 'media' | 'baja'; stereo: boolean; separated?: boolean; fromS: number; toS: number };
   /** Solo en canciones importadas desde un archivo de melodía (Fase 8b): la melodía es exacta. */
   source?: { format: 'ultrastar' | 'midi' | 'musicxml'; warnings: string[] };
 }

@@ -2,6 +2,12 @@
 
 Formato: fecha · decisión · motivo · referencia. Lo más reciente arriba.
 
+## 2026-10-06 · Fase 8c
+- **Separación de voz en el navegador, no en servidor:** HT-Demucs FT (voz, MIT) en ONNX con ONNX Runtime Web (WebGPU o WASM). · Regla «el audio nunca sale del dispositivo»; sin coste de GPU. · [fase-08c](../planning/fase-08c-separacion-de-voz.md), ADR-009.
+- **Opcional y bajo demanda:** 166 MB de modelo, descargados solo si el usuario lo pide, de una revisión fija de Hugging Face y con SHA-256 verificado. Fuera del precaché de la PWA.
+- **No se activa por defecto:** mejora mucho la voz enterrada en la banda, pero empeora la voz grave en la mezcla realista y tarda ~2–5× tiempo real sin GPU.
+- **Editar canciones importadas sobre un borrador con «Deshacer»**, conservando los ids de las frases (y su progreso).
+
 ## 2026-10-05 (mediodía) · Sonido y karaoke
 - **Instrumentos sintetizados en el dispositivo** (Web Audio) en lugar de muestras: sin descargas, sin derechos de terceros y offline. Los sostenidos se tocan ligados (una voz por frase). · Feedback: la guía "no tenía cuerpo".
 - **Acordes:** escritos a mano en el catálogo y **reconocidos del audio** en las importaciones; se tocan y se muestran como en un karaoke.

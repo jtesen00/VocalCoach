@@ -4,3 +4,5 @@ dist
 e2e/.fixtures
 test-results
 playwright-report
+# Modelos de IA descargados para medir (Fase 8c): no se versionan
+.models

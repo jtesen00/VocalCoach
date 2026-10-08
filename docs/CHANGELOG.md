@@ -4,6 +4,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Añadido — Fase 8c: separación de voz y edición de canciones importadas
+- **«Separar la voz con IA»** al importar desde audio (opcional): HT-Demucs FT (voz, MIT) en ONNX, ejecutado **en el navegador** con ONNX Runtime Web (WebGPU o WASM) en un Web Worker. El audio sigue sin salir del dispositivo.
+  - El modelo (166 MB) se descarga una vez bajo demanda, se verifica su SHA-256 y se guarda en la Cache API. Se puede borrar en Ajustes.
+  - Progreso por etapas y botón «Cancelar».
+  - En la mezcla realista: con la voz 8 dB bajo la banda, notas bien del 68 % al 90 %; menos notas «de más» en todos los casos.
+- **Editar canciones importadas** (✏️): título, letra por frase (sílabas con guiones), octava ↑/↓, dividir, unir con la siguiente y borrar, con «Deshacer». Se conserva el progreso de las frases.
+- COOP/COEP en el servidor de Vite (varios hilos para WASM) y caché en tiempo de ejecución del motor WASM.
+- Tests: unitarios del troceado y del editor; E2E del editor; medición `e2e/separation-real.spec.ts` y `pnpm bench:separation` (necesitan el modelo en `web/.models/`).
+
 ### Añadido — Fase 8b: archivos de melodía y canción entera
 - **Importar UltraStar (.txt), MIDI/karaoke (.mid, .kar) y MusicXML (.musicxml, .xml, .mxl):** la melodía sale exacta, con la letra sílaba a sílaba y las frases según las líneas del archivo.
 - **🎤 Cantar la canción entera** con la guía de la app (con o sin melodía, y con acordes) o con la canción original puesta fuera de la app. En los dos casos:
