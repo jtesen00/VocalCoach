@@ -15,6 +15,7 @@ import type { Settings } from '../../shared/settings';
 import { keyHistory, setSongVersion, songStore } from '../../shared/song-store';
 import { MelodyShape } from '../exercises/MelodyShape';
 import { ListenButton } from './ListenButton';
+import { sungGuide } from '../../shared/sung-guide';
 import { Stars } from './Stars';
 
 interface Props {
@@ -60,7 +61,7 @@ export function SongOverview({ song, settings, onPhrase, onTrain, onMeasure, onB
   /** Una frase: melodía y (si está activado) sus acordes. */
   const phraseSound = (p: (typeof phrases)[number]) => {
     const plan = phrasePlan(p, transpose);
-    return { events: guideEvents(plan), chords: withChords ? guideChords(plan) : undefined };
+    return { events: guideEvents(plan), chords: withChords ? guideChords(plan) : undefined, sung: settings.singLyrics ? sungGuide(plan) : undefined };
   };
   /** Toda la melodía seguida, con una breve pausa entre frases. */
   const wholeMelody = () => {

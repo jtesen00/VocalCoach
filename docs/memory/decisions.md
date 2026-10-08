@@ -2,6 +2,12 @@
 
 Formato: fecha · decisión · motivo · referencia. Lo más reciente arriba.
 
+## 2026-10-07 · Fase 9
+- **Demostraciones cantadas: primero una voz por formantes en el dispositivo**, no un modelo de IA. · Gratis, privada, sin conexión y sin licencias de voces; basta para enseñar dónde va cada sílaba. · ADR-008, [fase-09](../planning/fase-09-demostraciones-cantadas.md).
+- **La guía cantada va desactivada por defecto** (suena a robot); se ofrece con un botón en cada frase y un ajuste.
+- **Multi-IA con respaldo automático** (Groq, Gemini, Grok) en la web y en el servidor. · Petición del equipo; los planes gratuitos se agotan.
+- **Modelos elegidos por patrón sobre la lista del proveedor**, no por nombre fijo. · Los catálogos rotan cada pocos meses.
+
 ## 2026-10-06 · Fase 8c
 - **Separación de voz en el navegador, no en servidor:** HT-Demucs FT (voz, MIT) en ONNX con ONNX Runtime Web (WebGPU o WASM). · Regla «el audio nunca sale del dispositivo»; sin coste de GPU. · [fase-08c](../planning/fase-08c-separacion-de-voz.md), ADR-009.
 - **Opcional y bajo demanda:** 166 MB de modelo, descargados solo si el usuario lo pide, de una revisión fija de Hugging Face y con SHA-256 verificado. Fuera del precaché de la PWA.

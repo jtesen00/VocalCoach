@@ -11,12 +11,15 @@ public static class CoachApplication
 
 public sealed record ChatMessage(string Role, string Content);
 
-/// <summary>Modelo de lenguaje (Groq hoy; otro proveedor mañana sin tocar el caso de uso).</summary>
+/// <summary>
+/// Modelo de lenguaje. En el servidor puede haber varios proveedores (Groq, Gemini, Grok) con
+/// respaldo automático; el caso de uso no sabe cuál responde.
+/// </summary>
 public interface IChatModel
 {
     bool IsConfigured { get; }
 
-    Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken);
+    Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, int maxTokens, CancellationToken cancellationToken);
 }
 
 public sealed class ChatModelException(string message, bool rateLimited = false) : Exception(message)

@@ -1,9 +1,8 @@
 import { useRef, useState } from 'react';
-import { AiError, chat } from '../../ai/groq';
+import { aiErrorMessage, askAi } from '../../ai/ask';
 import { teacherMessages, type AttemptSummary, type ChatMessage } from '../../core/ai/teacher-prompt';
 import { aiReady, aiSettingsStore } from '../../shared/ai-settings';
-import { accountStore, authed } from '../../shared/account';
-import { ApiError } from '../../api/client';
+import { accountStore } from '../../shared/account';
 import { useOnline } from '../../app/pwa';
 
 /**
@@ -14,15 +13,15 @@ import { useOnline } from '../../app/pwa';
 export function AiTeacher({ summary }: { summary: AttemptSummary }) {
   const ai = aiSettingsStore.use();
   const account = accountStore.use();
-  // Con clave propia (pruebas) se llama a Groq directamente; con cuenta, por el servidor (la clave no sale de él).
-  const mode = aiReady(ai) ? 'byok' : account.user ? 'server' : null;
+  // Con clave propia (pruebas) se llama al proveedor directamente; con cuenta, por el servidor (la clave no sale de él).
+  const available = aiReady(ai) || !!account.user;
   const [conversation, setConversation] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [question, setQuestion] = useState('');
   const abort = useRef<AbortController | null>(null);
   const online = useOnline();
-  if (!mode) return null;
+  if (!available) return null;
   if (!online) return <p className="hint ai-teacher">El profe con IA necesita internet. Lo demás funciona sin conexión.</p>;
 
   const ask = async (extra: ChatMessage[]) => {
@@ -31,14 +30,10 @@ export function AiTeacher({ summary }: { summary: AttemptSummary }) {
     setBusy(true);
     setError(null);
     try {
-      const messages = teacherMessages(summary, extra);
-      const answer =
-        mode === 'byok'
-          ? await chat(ai.groqKey, ai.model!, messages, abort.current.signal)
-          : (await authed<{ content: string }>('/api/coach/teacher', { method: 'POST', body: JSON.stringify({ messages }), signal: abort.current.signal })).content;
-      setConversation([...extra, { role: 'assistant', content: answer }]);
+      const { text } = await askAi(ai, !!account.user, teacherMessages(summary, extra), abort.current.signal);
+      setConversation([...extra, { role: 'assistant', content: text }]);
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') setError(e instanceof AiError || e instanceof ApiError ? e.message : 'No se pudo obtener respuesta.');
+      if ((e as Error).name !== 'AbortError') setError(aiErrorMessage(e));
     } finally {
       setBusy(false);
     }

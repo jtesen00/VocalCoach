@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Sin publicar]
 
+### Añadido — Fase 9: demostraciones cantadas y multi-IA
+- **Voz sintética que canta la letra** (peldaño 1 del ADR-008): síntesis por formantes en el dispositivo, sin IA ni voces de terceros. Fonemas del español, consonantes adelantadas al pulso, melismas, vibrato y voz grave o aguda.
+  - «🗣 Escúchala cantada» en cada frase con letra.
+  - Ajustes → «Que la guía cante la letra», para la guía de las frases y el karaoke.
+- **Multi-IA:** Groq, Google Gemini y xAI Grok, con varias claves a la vez, proveedor preferido y respaldo automático si uno falla. El modelo se elige de la lista de cada proveedor. Igual en el servidor (`Coach:Groq|Gemini|Xai`, `Coach:Order`).
+- **«💡 ¿Cómo la canto? (IA)»:** ideas de interpretación para cada frase a partir de la letra, la melodía y tu zona cómoda (solo texto).
+- Tests: unitarios de fonemas, partitura cantada, elección de modelo y prompt; E2E de la voz sintética (afinación, volumen y vocales), del respaldo entre proveedores y de las ideas por frase; tests del API de multi-IA.
+
 ### Añadido — Fase 8c: separación de voz y edición de canciones importadas
 - **«Separar la voz con IA»** al importar desde audio (opcional): HT-Demucs FT (voz, MIT) en ONNX, ejecutado **en el navegador** con ONNX Runtime Web (WebGPU o WASM) en un Web Worker. El audio sigue sin salir del dispositivo.
   - El modelo (166 MB) se descarga una vez bajo demanda, se verifica su SHA-256 y se guarda en la Cache API. Se puede borrar en Ajustes.

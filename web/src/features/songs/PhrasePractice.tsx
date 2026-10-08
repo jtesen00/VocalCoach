@@ -14,6 +14,9 @@ import { recordAttempt } from '../../shared/progress-store';
 import { ExerciseTimeline } from '../exercises/ExerciseTimeline';
 import { useExerciseRun } from '../exercises/useExerciseRun';
 import { LiveSongCue } from './LiveSongCue';
+import { sungGuide } from '../../shared/sung-guide';
+import { songStore } from '../../shared/song-store';
+import { AiPhraseTips } from './AiPhraseTips';
 
 interface Props {
   song: Song;
@@ -33,9 +36,10 @@ const ICON = { good: '✓', fair: '⚠', weak: '✗' } as const;
 export function PhrasePractice({ song, phraseIndex, transpose, tempo, settings, onBack, onTrain, onNext, backLabel = '← Volver a la canción' }: Props) {
   const ref = useMemo(() => allPhrases(song)[phraseIndex], [song, phraseIndex]);
   const plan = useMemo(() => phrasePlan(ref, transpose, tempo), [ref, transpose, tempo]);
-  const { state, start, cancel, framesRef, timingRef } = useExerciseRun(plan, settings, { record: false });
+  const { state, start, cancel, framesRef, timingRef } = useExerciseRun(plan, settings, { record: false, sing: settings.singLyrics });
   const [result, setResult] = useState<{ score: PhraseResult; record: PhraseRecord | null } | null>(null);
-  const [demo, setDemo] = useState(false);
+  const [demo, setDemo] = useState<'slow' | 'sung' | null>(null);
+  const sung = useMemo(() => sungGuide(plan), [plan]);
   const running = state.phase === 'listening' || state.phase === 'countdown' || state.phase === 'singing';
 
   useEffect(() => {
@@ -59,9 +63,17 @@ export function PhrasePractice({ song, phraseIndex, transpose, tempo, settings, 
   }, [state.phase, state.evaluation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const listenSlow = async () => {
-    setDemo(true);
-    await audioEngine.playGuide(guideEvents(plan, 0.7), settings.accompaniment ? guideChords(plan, 0.7) : undefined).done;
-    setDemo(false);
+    setDemo('slow');
+    await audioEngine.playGuide(guideEvents(plan, 0.7), settings.accompaniment ? guideChords(plan, 0.7) : undefined, {
+      sung: settings.singLyrics ? sungGuide(plan, 0.7) : undefined,
+    }).done;
+    setDemo(null);
+  };
+  /** Demostración cantada con la letra (voz sintética), a velocidad normal. */
+  const listenSung = async () => {
+    setDemo('sung');
+    await audioEngine.playGuide(guideEvents(plan), settings.accompaniment ? guideChords(plan) : undefined, { sung }).done;
+    setDemo(null);
   };
 
   const issue = result ? describeIssue(ref, result.score.issue) : null;
@@ -104,9 +116,27 @@ export function PhrasePractice({ song, phraseIndex, transpose, tempo, settings, 
           <button className="primary" onClick={start}>{state.phase === 'result' ? 'Repetir' : '▶ Empezar'}</button>
         )}
         {!running && (
-          <button onClick={listenSlow} disabled={demo}>{demo ? '♪ Sonando…' : '🔊 Escuchar despacio'}</button>
+          <button onClick={listenSlow} disabled={!!demo}>{demo === 'slow' ? '♪ Sonando…' : '🔊 Escuchar despacio'}</button>
+        )}
+        {!running && sung && (
+          <button onClick={listenSung} disabled={!!demo}>{demo === 'sung' ? '♪ Cantando…' : '🗣 Escúchala cantada'}</button>
         )}
       </div>
+
+      {!running && (
+        <AiPhraseTips
+          context={() => {
+            const last = songStore.get()[song.id]?.byKey[String(transpose)]?.[ref.phrase.id];
+            return {
+              song: song.title,
+              lyrics: ref.phrase.lyrics,
+              plan: tempo === 1 ? plan : phrasePlan(ref, transpose),
+              comfortable: profileRanges(profileStore.get()).comfortable,
+              last: last?.lastIssue ? { score: last.last, issue: describeIssue(ref, last.lastIssue).title } : null,
+            };
+          }}
+        />
+      )}
 
       {result && issue && (
         <div className="phrase-result" aria-live="polite">

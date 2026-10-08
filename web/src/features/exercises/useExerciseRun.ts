@@ -6,6 +6,7 @@ import type { ExercisePlan } from '../../core/exercises/types';
 import type { PitchFrame } from '../../core/pitch/types';
 import { TOLERANCE_BY_LEVEL } from '../../core/scoring/pitch-scoring';
 import type { Settings } from '../../shared/settings';
+import { sungGuide } from '../../shared/sung-guide';
 import { recordAttempt } from '../../shared/progress-store';
 import { recordEvaluation } from '../../core/profile/vocal-profile';
 import { profileStore } from '../../shared/profile-store';
@@ -53,7 +54,7 @@ function waitUntil(t: number, isCancelled: () => boolean): Promise<boolean> {
  * frases de canción lo guardan ellas mismas con su propia puntuación.
  * Los frames se acumulan en un ref (no en estado de React) y se comparten con el canvas.
  */
-export function useExerciseRun(plan: ExercisePlan, settings: Settings, options: { record?: boolean } = {}) {
+export function useExerciseRun(plan: ExercisePlan, settings: Settings, options: { record?: boolean; sing?: boolean } = {}) {
   const record = options.record ?? true;
   const [state, setState] = useState<RunState>({ phase: 'ready', beat: null, evaluation: null, previous: [] });
   const framesRef = useRef<PitchFrame[]>([]);
@@ -74,7 +75,7 @@ export function useExerciseRun(plan: ExercisePlan, settings: Settings, options: 
     setState({ phase: 'listening', beat: null, evaluation: null, previous: [] });
 
     const events = guideEvents(plan);
-    const guide = audioEngine.playGuide(events, settings.accompaniment ? guideChords(plan) : undefined);
+    const guide = audioEngine.playGuide(events, settings.accompaniment ? guideChords(plan) : undefined, { sung: options.sing ? sungGuide(plan) : undefined });
     timingRef.current = {
       guideStartT: guide.startT,
       guideDurationS: guide.endT - guide.startT,

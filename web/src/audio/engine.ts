@@ -5,6 +5,9 @@ import { checkBluetooth, type BluetoothCheck } from './devices';
 import type { PitchProcessorOptions, WorkletMessage } from './pitch-worklet';
 import { scheduleClick, type GuideEvent } from './guide';
 import { loadInstrument, playChords, playMelody, type InstrumentId } from './instruments';
+import { playSung } from './singer';
+import type { SungScore } from '../core/singing/score';
+import type { VoiceType } from '../core/singing/formants';
 import type { TimedChord } from '../core/music/chords';
 import workletUrl from './pitch-worklet.ts?worker&url';
 
@@ -187,13 +190,19 @@ export class AudioEngine {
   playGuide(
     events: readonly GuideEvent[],
     chords?: readonly TimedChord[],
-    options: { listen?: boolean; startDelayS?: number; melodyGain?: number } = {},
+    options: { listen?: boolean; startDelayS?: number; melodyGain?: number; sung?: { score: SungScore; voice: VoiceType } } = {},
   ): { startT: number; endT: number; done: Promise<void> } {
     const ctx = this.ctx;
     if (!ctx) return { startT: 0, endT: 0, done: Promise.resolve() };
     const startT = ctx.currentTime + 0.08 + (options.startDelayS ?? 0);
     this.guideNodes = this.guideNodes.filter((n) => n.context === ctx);
-    const endT = options.melodyGain === 0 ? startT + events.reduce((a, e) => a + e.durationS, 0) : playMelody(ctx, this.instrument, events, startT, this.guideNodes);
+    // Con `sung`, la melodía la canta la voz sintética con la letra (Fase 9).
+    const endT =
+      options.melodyGain === 0
+        ? startT + events.reduce((a, e) => a + e.durationS, 0)
+        : options.sung
+          ? playSung(ctx, options.sung.score, options.sung.voice, startT, this.guideNodes)
+          : playMelody(ctx, this.instrument, events, startT, this.guideNodes);
     if (chords?.length) playChords(ctx, this.instrument, chords, startT, this.guideNodes);
     if (options.listen) {
       const done = new Promise<void>((resolve) => {

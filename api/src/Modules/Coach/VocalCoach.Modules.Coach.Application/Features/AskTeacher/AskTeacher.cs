@@ -8,7 +8,11 @@ namespace VocalCoach.Modules.Coach.Application.Features.AskTeacher;
 /// Intermediario del profe con IA: la app manda los mensajes (solo texto con el resumen del
 /// intento) y el servidor añade la clave del proveedor, que nunca llega al navegador.
 /// </summary>
-public sealed record AskTeacherCommand(IReadOnlyList<ChatMessage> Messages) : ICommand<TeacherAnswer>;
+public sealed record AskTeacherCommand(IReadOnlyList<ChatMessage> Messages, int? MaxTokens = null) : ICommand<TeacherAnswer>
+{
+    public const int DefaultMaxTokens = 400;
+    public const int MaxMaxTokens = 800;
+}
 
 public sealed record TeacherAnswer(string Content);
 
@@ -24,6 +28,8 @@ internal sealed class AskTeacherValidator : AbstractValidator<AskTeacherCommand>
         RuleForEach(c => c.Messages).Must(m => m.Role is "system" or "user" or "assistant").WithErrorCode("coach.role").WithMessage("Rol de mensaje no válido.")
             .Must(m => !string.IsNullOrWhiteSpace(m.Content) && m.Content.Length <= MaxChars).WithErrorCode("coach.content").WithMessage($"Cada mensaje debe tener entre 1 y {MaxChars} caracteres.");
         RuleFor(c => c.Messages).Must(m => m.Count(x => x.Role == "system") <= 1).WithErrorCode("coach.role").WithMessage("Solo un mensaje de sistema.");
+        RuleFor(c => c.MaxTokens).InclusiveBetween(50, AskTeacherCommand.MaxMaxTokens).When(c => c.MaxTokens is not null)
+            .WithErrorCode("coach.max_tokens").WithMessage($"maxTokens debe estar entre 50 y {AskTeacherCommand.MaxMaxTokens}.");
     }
 }
 
@@ -41,7 +47,7 @@ internal sealed class AskTeacherHandler(IChatModel model) : ICommandHandler<AskT
 
         try
         {
-            return new TeacherAnswer(await model.CompleteAsync(command.Messages, cancellationToken));
+            return new TeacherAnswer(await model.CompleteAsync(command.Messages, command.MaxTokens ?? AskTeacherCommand.DefaultMaxTokens, cancellationToken));
         }
         catch (ChatModelException ex)
         {

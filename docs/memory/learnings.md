@@ -40,3 +40,8 @@
 - **El `.wasm` de ORT con Vite:** excluir `onnxruntime-web` de `optimizeDeps` e importar el wasm con `?url` (`ort.env.wasm.wasmPaths = { wasm: url }`). Si no, el servidor devuelve el `index.html` y falla con «expected magic word 00 61 73 6d».
 - **Demucs no reconoce una «voz» sintética** (tonos armónicos): para medir la separación hace falta voz grabada (`dev/real-mix.ts`), no `test-mix.ts`.
 - **Medir con Playwright mientras se edita `src/`:** Vite recarga la página y el `page.evaluate` largo muere («Execution context was destroyed»). Para mediciones largas, ejecutar desde una copia del código.
+- **Gemini y Grok hablan «OpenAI»:** Gemini en `…/v1beta/openai/` (los ids de `/models` llevan el prefijo `models/`), Grok en `api.x.ai/v1`. Un solo cliente sirve para los tres proveedores.
+- **Los tests `src/**/*.test.ts` se compilan con `tsconfig.node.json`** (sin DOM ni tipos de Vite): la lógica que se quiera testear debe vivir en `core/`.
+- **Voz por formantes:** con la nota más aguda que F1, la fundamental queda fuera del formante y la voz se apaga. Se sube F1 hasta la fundamental, como hacen los cantantes.
+- **Docker no siempre está arrancado en local:** los tests de integración del API (Testcontainers) fallan con «Failed to connect to Docker endpoint»; los demás se ejecutan igual y el CI sí tiene Docker.
+- **Heredocs largos en el Bash de Windows** a veces fallan con «unexpected EOF while looking for matching `''»: mejor escribir el script a un archivo y ejecutarlo.

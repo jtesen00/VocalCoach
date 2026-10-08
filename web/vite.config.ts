@@ -5,9 +5,11 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // Groq no garantiza CORS para llamadas desde el navegador: en desarrollo y en `vite preview`
 // se reenvían por el propio servidor local (/groq → api.groq.com). La clave la pone el usuario.
-const groqProxy = { '/groq': { target: 'https://api.groq.com', changeOrigin: true, rewrite: (p: string) => p.replace(/^\/groq/, '') } };
+// Lo mismo con Gemini y Grok (multi-IA, Fase 9).
+const forward = (prefix: string, target: string) => ({ [`/${prefix}`]: { target, changeOrigin: true, rewrite: (p: string) => p.replace(new RegExp(`^/${prefix}`), '') } });
+const aiProxy = { ...forward('groq', 'https://api.groq.com'), ...forward('gemini', 'https://generativelanguage.googleapis.com'), ...forward('xai', 'https://api.x.ai') };
 // Backend .NET local (api/): `dotnet run --project src/VocalCoach.Api` escucha en el puerto 5080.
-const proxy = { ...groqProxy, '/api': { target: process.env.VOCALCOACH_API ?? 'http://localhost:5080', changeOrigin: true } };
+const proxy = { ...aiProxy, '/api': { target: process.env.VOCALCOACH_API ?? 'http://localhost:5080', changeOrigin: true } };
 
 const isolation = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' };
 
@@ -42,7 +44,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,mp3,json,md,webmanifest}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        navigateFallbackDenylist: [/^\/groq/, /^\/api\//],
+        navigateFallbackDenylist: [/^\/groq/, /^\/gemini/, /^\/xai/, /^\/api\//],
         cleanupOutdatedCaches: true,
         // El motor de la separación de voz (28 MB) no se precarga: se guarda la primera vez que se usa.
         runtimeCaching: [{ urlPattern: /\/assets\/ort-wasm.*\.wasm$/, handler: 'CacheFirst', options: { cacheName: 'vocalcoach-ort-wasm', expiration: { maxEntries: 2 } } }],

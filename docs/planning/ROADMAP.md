@@ -14,7 +14,7 @@ Orden conceptual del spec: pitch → visualización → scoring → ejercicios �
 | **8a** | **Entrenamiento por canción** (adelantada por ser el diferenciador): perfil vocal dinámico, tono recomendado, dificultad personal, frases, entrenamiento generado e importación local desde MP3 ([detalle](fase-08a-canciones.md), ADR-010) | ✅ Implementado (en `dev`) · ⏳ falta validar con alumnos | El bucle completo produce mejora medible en la frase entrenada |
 | 8b | Archivos de melodía (UltraStar/MIDI/MusicXML) y canción entera tipo karaoke, con guía o con el original fuera de la app, y calibración de sincronía (ADR-009, [detalle](fase-08b-melodia-y-karaoke.md)) | ✅ Implementado (en `dev`) · ⏳ falta medir estabilidad con grabaciones reales | Puntuación estable entre repeticiones |
 | 8c | Separación de voz en el navegador (HT-Demucs en ONNX, WebGPU/WASM, opcional) y edición de canciones importadas ([detalle](fase-08c-separacion-de-voz.md)) | ✅ Implementado (en `dev`) · ⏳ falta medir con MP3 reales y en móviles | Melodía utilizable sin edición en ≥ 70 % de canciones de prueba |
-| 9 | Demostraciones cantadas con IA (ADR-008) | Pendiente | |
+| 9 | Demostraciones cantadas (ADR-008, peldaño 1: voz sintética que canta la letra), multi-IA (Groq, Gemini, Grok, con respaldo) e ideas de interpretación por frase ([detalle](fase-09-demostraciones-cantadas.md)) | ✅ Implementado (en `dev`) · ⏳ falta validar la voz con usuarios y probar claves reales | Los alumnos entienden dónde va cada sílaba; peldaño 2 solo si aporta |
 
 ## Deuda y validaciones abiertas
 

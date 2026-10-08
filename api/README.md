@@ -16,19 +16,23 @@ dotnet run --project src/VocalCoach.Api   # http://localhost:5080 (aplica las mi
 ```
 La web (`cd web && pnpm dev`) reenvía `/api` a `http://localhost:5080`. En Ajustes → Tu cuenta, crea una cuenta y tu progreso se sincronizará.
 
-### Profe con IA por el servidor
-La clave del proveedor **no va en el repositorio** ni en el navegador. Hay dos formas de darla:
+### Profe con IA por el servidor (multi-IA)
+Se pueden configurar **Groq, Google Gemini y xAI Grok**. Se prueban en el orden de `Coach:Order` (por defecto `groq, gemini, xai`) y, si uno falla (límite, red, modelo retirado), responde el siguiente. Sin `Model`, cada uno elige su mejor modelo de texto de la lista del proveedor.
+
+Las claves **no van en el repositorio** ni en el navegador. Hay dos formas de darlas:
 ```bash
 dotnet user-secrets set "Coach:Groq:ApiKey" "gsk_..." --project src/VocalCoach.Api
-# o por variable de entorno: Coach__Groq__ApiKey=gsk_...
+dotnet user-secrets set "Coach:Gemini:ApiKey" "AIza..." --project src/VocalCoach.Api
+dotnet user-secrets set "Coach:Xai:ApiKey" "xai-..." --project src/VocalCoach.Api
+# o por variables de entorno: Coach__Groq__ApiKey, Coach__Gemini__ApiKey, Coach__Xai__ApiKey
 ```
-Sin clave, `/api/coach/teacher` responde 503 «no configurado».
+Sin ninguna clave, `/api/coach/teacher` responde 503 «no configurado».
 
 ### Producción
 Por variables de entorno:
 - `ConnectionStrings__Database`;
 - `Jwt__SigningKey` (≥ 32 bytes, aleatoria);
-- `Coach__Groq__ApiKey`;
+- `Coach__Groq__ApiKey`, `Coach__Gemini__ApiKey` y/o `Coach__Xai__ApiKey` (al menos una para el profe con IA);
 - `Cors__Origins__0=https://tu-dominio`.
 
 Las migraciones se aplican con `Database__MigrateOnStartup=true` o con `dotnet ef database update` por módulo.

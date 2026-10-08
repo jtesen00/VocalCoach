@@ -3,5 +3,6 @@
     <ProjectReference Include="../../src/Modules/Identity/VocalCoach.Modules.Identity.Domain/VocalCoach.Modules.Identity.Domain.csproj" />
     <ProjectReference Include="../../src/Modules/Practice/VocalCoach.Modules.Practice.Domain/VocalCoach.Modules.Practice.Domain.csproj" />
     <ProjectReference Include="../../src/Modules/Progress/VocalCoach.Modules.Progress.Domain/VocalCoach.Modules.Progress.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Coach/VocalCoach.Modules.Coach.Infrastructure/VocalCoach.Modules.Coach.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

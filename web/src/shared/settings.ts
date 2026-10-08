@@ -15,6 +15,8 @@ export interface Settings {
   instrument: InstrumentId;
   /** Acompañamiento con acordes en las canciones. */
   accompaniment: boolean;
+  /** En las canciones con letra, la guía la canta con la voz sintética (Fase 9). */
+  singLyrics: boolean;
   /** Retraso medido con la calibración (ms), o null si no se ha medido. */
   latencyMs: number | null;
 }
@@ -27,6 +29,7 @@ const DEFAULTS: Settings = {
   showDetails: false,
   instrument: 'piano',
   accompaniment: true,
+  singLyrics: false,
   latencyMs: null,
 };
 const KEY = 'vocalcoach.settings.v1';

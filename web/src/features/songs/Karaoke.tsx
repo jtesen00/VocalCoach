@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { sungGuide } from '../../shared/sung-guide';
 import { audioEngine } from '../../audio/engine';
 import { evaluateExercise } from '../../core/exercises/evaluate';
 import { guideChords, guideEvents } from '../../core/exercises/guide';
@@ -101,6 +102,7 @@ export function Karaoke({ song, settings, onBack, onTrain }: Props) {
           listen: true,
           startDelayS: Math.max(0, singT - now - 0.08),
           melodyGain: melody ? 1 : 0,
+          sung: settings.singLyrics ? sungGuide(timeline.plan) : undefined,
         });
         songT0.current = guide.startT;
       } else {

@@ -82,6 +82,13 @@ export function SettingsPage({ settings, updateSettings, onMeasureVoice }: Props
             <span className="hint"> — en las canciones suenan también los acordes, como en un karaoke.</span>
           </span>
         </label>
+        <label className="choice">
+          <input type="checkbox" checked={settings.singLyrics} onChange={(e) => updateSettings({ singLyrics: e.target.checked })} />
+          <span>
+            <strong>Que la guía cante la letra</strong>
+            <span className="hint"> — en las canciones con letra, una voz sintética canta cada sílaba en su nota. Suena a robot, pero te enseña dónde va cada palabra. Se genera en tu dispositivo.</span>
+          </span>
+        </label>
         <p><button onClick={() => preview(settings.accompaniment)}>▶ Probar sonido</button></p>
         <p className="hint">
           Grabaciones: piano Salamander (A. Holm, CC BY 3.0), voz FluidR3 (F. Wen, CC BY 3.0) y silbido, flauta y cuerdas Musyng Kite (CC BY-SA 3.0).{' '}

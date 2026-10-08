@@ -349,8 +349,13 @@ input.time { width: 5.5rem; border: 1px solid var(--line); background: var(--sur
 .ai-teacher { margin: 0.75rem 0 1rem; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 10px; }
 .ai-chat { list-style: none; padding: 0; margin: 0 0 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; }
 .ai-chat li { white-space: pre-wrap; line-height: 1.45; }
+.ai-tips-text { white-space: pre-wrap; line-height: 1.5; }
+.ai-phrase-tips { margin-top: 12px; }
 .ai-chat li.user { color: var(--muted); }
 .ai-ask, .ai-key { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.ai-providers { list-style: none; padding: 0; margin: 0 0 0.6rem; }
+.ai-providers li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.ai-key select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
 .ai-ask input, .ai-key input { flex: 1; min-width: 200px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
 
 /* Cuenta */

@@ -68,3 +68,15 @@ La detección de pitch, la evaluación, el profesor, las recomendaciones de tono
 - **Tests:**
   - unitarios del resumen y del prompt;
   - E2E con la API simulada (conectar, explicar, preguntar, clave inválida).
+
+## Implementado: multi-IA (Fase 9)
+- **Proveedores:** Groq, Google Gemini y xAI Grok. Los tres tienen API compatible con OpenAI (`/models` y `/chat/completions`), así que comparten un cliente (`web/src/ai/providers.ts`; en el servidor, `OpenAiCompatibleChatModel`).
+  - Gemini: `https://generativelanguage.googleapis.com/v1beta/openai/`.
+  - Grok: `https://api.x.ai/v1/`.
+- **Varias claves a la vez:** el usuario elige su preferido y los demás hacen de respaldo si falla (límite, red o modelo retirado). En el servidor, `Coach:Order`.
+- **Modelo por patrón, no por nombre:** los catálogos rotan, así que se elige de la lista de cada proveedor (`web/src/core/ai/models.ts` y `ModelPickers` en C#):
+  - Gemini: el Flash más nuevo, sin imagen, voz ni vista previa;
+  - Grok: el rápido sin razonamiento;
+  - Groq: lista de preferidos.
+- **Usos:** el profe que explica el intento (caso A) e ideas de interpretación por frase («¿Cómo la canto?», Fase 9). Solo texto.
+- **Pendiente:** probar con claves reales de Gemini y Grok, sobre todo el CORS desde el navegador en producción. En desarrollo pasan por el servidor de Vite (`/gemini`, `/xai`).

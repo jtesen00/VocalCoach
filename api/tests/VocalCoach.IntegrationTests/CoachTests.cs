@@ -16,7 +16,7 @@ public sealed class CoachTests(ApiFactory api)
 
         public bool IsConfigured => true;
 
-        public Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken)
+        public Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, int maxTokens, CancellationToken cancellationToken)
         {
             Calls.Add(messages);
             return Task.FromResult("¡Bien! Mantén la nota firme.");
