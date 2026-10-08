@@ -1,11 +1,11 @@
 # Estado actual
 
-_Última actualización: 2026-10-07 · versión 0.2.0 + Fases 4–9 (sin publicar, en `dev`)_
+_Última actualización: 2026-10-07 · versión 0.2.0 + Fases 4–9 (en `main`)_
 
 ## Ramas
-- `main`: tiene la Fase 2 (PR #1 fusionado). **La Fase 3 no llegó a `main`**: se fusionó antes del último push.
-- `dev`: Fases 3 a 9. PR abierto a `main`: https://github.com/jtesen00/VocalCoach/pull/2
-- `changes`: creada desde `main`, sin cambios.
+- `main`: Fases 2 a 9 (PR #1 y PR #2 fusionados; el #2 el 2026-10-08).
+- `dev`: igual que `main` tras la fusión; aquí sigue el desarrollo.
+- `changes`: creada desde `main` antes de la Fase 3, sin cambios: actualizarla con `main` antes de usarla.
 
 ## Hecho
 - Fase 2 (motor de pitch) y Fase 3 (ejercicios), probadas con señales sintéticas y E2E en Chromium.
